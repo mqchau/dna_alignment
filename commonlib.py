@@ -1,4 +1,5 @@
 import numpy as np
+import ipdb
 
 # convert the genome sequence into integer for efficient storage
 # A->1, C->2, G->3, T->4
@@ -17,7 +18,7 @@ def read_reference_genome(ref_file):
 
     # calculate how many bases we have
     # assumming we have same number of base from line 1 -> n -1
-    total_base = len(lines[1].rstrip()) * len(lines)-2 + len(lines[-1].rstrip())
+    total_base = len(lines[1].rstrip()) * (len(lines)-2) + len(lines[-1].rstrip())
         
     # allocate memory as np array
     return_array = np.zeros(total_base)

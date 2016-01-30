@@ -6,3 +6,6 @@ CREATE TABLE IF NOT EXISTS reference_hash (
     location INTEGER[],
     PRIMARY KEY (mer)
 );
+
+
+CREATE INDEX mer_hash ON reference_hash USING hash (mer);
