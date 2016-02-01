@@ -11,6 +11,18 @@ mismatch = -1
 match = 2
 indel = -1
 
+def debug_print_mutations(mutation_list):
+    for one_base in mutation_list:
+        if one_base["type"] == "insert":
+            print "%05d\t-\t%d" % (one_base["ref_idx"], one_base["base"])
+        elif one_base["type"] == "match":
+            print "%05d\t%d\t%d" % (one_base["ref_idx"], one_base["base"], one_base["base"])
+        elif one_base["type"] == "mismatch":
+            print "%05d\t%d\t%d\tmismatch" % (one_base["ref_idx"], reference_genome[one_base["ref_idx"]], one_base["base"])
+        elif one_base["type"] == "delete":
+            print "%05d\t%d\t-" % (one_base["ref_idx"], reference_genome[one_base["ref_idx"]])
+
+
 def align_one_read_pair(read_pair):
     # align first read by hashing
     possible_match_left_read = align_one_read_by_hash(read_pair[0])
@@ -22,7 +34,8 @@ def align_one_read_pair(read_pair):
             reference_genome[
                 one_possible_match["approx_start"]: 
                 one_possible_match["approx_end"]], 
-            oriented_read)
+            oriented_read, one_possible_match["approx_start"])
+        debug_print_mutations(mutations)
     # ipdb.set_trace()
 
 
@@ -59,7 +72,9 @@ def align_one_read_by_hash(read):
 
     return match_locations
 
-def align_read_by_local_alignment(ref, read):
+def align_read_by_local_alignment(ref, read, ref_start_idx):
+    global indel, match, mismatch
+    
     # create 3d array to store the local alignment score and direction
     # 1st dim: bases on read
     # 2nd dim: bases on ref
@@ -77,6 +92,7 @@ def align_read_by_local_alignment(ref, read):
             score_from_diag = score_table[read_base_idx-1, ref_base_idx-1, 0] + diag_delta
 
             max_score = np.max((score_from_top, score_from_left, score_from_diag))
+            score_table[read_base_idx, ref_base_idx, 0] = max_score
 
             if score_from_diag == max_score:
                 score_table[read_base_idx, ref_base_idx, 2] = 1
@@ -103,24 +119,23 @@ def align_read_by_local_alignment(ref, read):
             start_location = (start_location[0] - 1, start_location[1])
             mutations.append({
                 "type": "insert",
-                "ref_idx": start_location[1] - 1,
+                "ref_idx": start_location[1] - 1 + ref_start_idx,
                 "base": read[start_location[0]-1]
             })
         # match/mismatch, move to diag
         elif score_table[start_location[0], start_location[1], 2] == 1:
             start_location = (start_location[0] - 1, start_location[1] - 1)
-            if read[start_location[0]-1] != ref[start_location[1]-1]:
-                mutations.append({
-                    "type": "mismatch",
-                    "ref_idx": start_location[1] - 1,
-                    "base": read[start_location[0]-1]
-                })
+            mutations.append({
+                "type": "mismatch" if read[start_location[0]-1] != ref[start_location[1]-1] else "match",
+                "ref_idx": start_location[1] - 1 + ref_start_idx,
+                "base": read[start_location[0]-1]
+            })
         # delete on read, move to left
         elif score_table[start_location[0], start_location[1], 3] == 1:
             start_location = (start_location[0], start_location[1]-1)
             mutations.append({
                 "type": "delete",
-                "ref_idx": start_location[1] - 1
+                "ref_idx": start_location[1] - 1 + ref_start_idx
             })
         else:
             start_location = None
