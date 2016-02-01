@@ -21,7 +21,7 @@ def read_reference_genome(ref_file):
     total_base = len(lines[1].rstrip()) * (len(lines)-2) + len(lines[-1].rstrip())
         
     # allocate memory as np array
-    return_array = np.zeros(total_base)
+    return_array = np.zeros(total_base, dtype=np.uint8)
     offset = 0
     for line in lines[1:]:
         line = line.rstrip()
@@ -43,7 +43,7 @@ def read_all_reads(reads_file):
     read_length = len(lines[1].split(',')[0])
 
     # allocate memory as np array
-    return_array = np.zeros((num_read_pairs, 2, read_length))
+    return_array = np.zeros((num_read_pairs, 2, read_length), dtype=np.uint8)
     pair_idx = 0
     for line in lines[1:]:
         line = line.rstrip()

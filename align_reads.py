@@ -11,16 +11,33 @@ mismatch = -1
 match = 2
 indel = -1
 
+def get_base_char_from_int(num):
+
+    base_lookup = ["A", "C", "G", "T"]
+    # print num
+    return base_lookup[int(num)-1]
+
 def debug_print_mutations(mutation_list):
+    ref_string = ""
+    read_string = ""
     for one_base in mutation_list:
         if one_base["type"] == "insert":
-            print "%05d\t-\t%d" % (one_base["ref_idx"], one_base["base"])
+            ref_string += "-"
+            read_string += get_base_char_from_int(one_base["base"])
+            # print "%05d\t-\t%d" % (one_base["ref_idx"], one_base["base"])
         elif one_base["type"] == "match":
-            print "%05d\t%d\t%d" % (one_base["ref_idx"], one_base["base"], one_base["base"])
+            ref_string += get_base_char_from_int(one_base["base"])
+            read_string += get_base_char_from_int(one_base["base"])
+            # print "%05d\t%d\t%d" % (one_base["ref_idx"], one_base["base"], one_base["base"])
         elif one_base["type"] == "mismatch":
-            print "%05d\t%d\t%d\tmismatch" % (one_base["ref_idx"], reference_genome[one_base["ref_idx"]], one_base["base"])
+            ref_string += get_base_char_from_int(reference_genome[one_base["ref_idx"]])
+            read_string += get_base_char_from_int(one_base["base"]).lower()
+            # print "%05d\t%d\t%d\tmismatch" % (one_base["ref_idx"], reference_genome[one_base["ref_idx"]], one_base["base"])
         elif one_base["type"] == "delete":
-            print "%05d\t%d\t-" % (one_base["ref_idx"], reference_genome[one_base["ref_idx"]])
+            ref_string += get_base_char_from_int(reference_genome[one_base["ref_idx"]])
+            read_string += "-"
+            # print "%05d\t%d\t-" % (one_base["ref_idx"], reference_genome[one_base["ref_idx"]])
+    print "Refer: %s\nDonor: %s" % (ref_string, read_string)
 
 
 def align_one_read_pair(read_pair):
@@ -36,7 +53,6 @@ def align_one_read_pair(read_pair):
                 one_possible_match["approx_end"]], 
             oriented_read, one_possible_match["approx_start"])
         debug_print_mutations(mutations)
-    # ipdb.set_trace()
 
 
 def align_one_read_by_hash(read):
@@ -113,34 +129,36 @@ def align_read_by_local_alignment(ref, read, ref_start_idx):
     
     start_location = max_global_location
     mutations = []
-    while start_location is not None:
+    while start_location is not None and start_location[0] > 0 and start_location[1] > 0:
         # insert on read, move to top
         if score_table[start_location[0], start_location[1], 1] == 1:
-            start_location = (start_location[0] - 1, start_location[1])
             mutations.append({
                 "type": "insert",
                 "ref_idx": start_location[1] - 1 + ref_start_idx,
                 "base": read[start_location[0]-1]
             })
+            start_location = (start_location[0] - 1, start_location[1])
         # match/mismatch, move to diag
         elif score_table[start_location[0], start_location[1], 2] == 1:
-            start_location = (start_location[0] - 1, start_location[1] - 1)
             mutations.append({
                 "type": "mismatch" if read[start_location[0]-1] != ref[start_location[1]-1] else "match",
                 "ref_idx": start_location[1] - 1 + ref_start_idx,
-                "base": read[start_location[0]-1]
+                "base": read[start_location[0]-1],
+                "read_idx": start_location[0]-1
             })
+            start_location = (start_location[0] - 1, start_location[1] - 1)
         # delete on read, move to left
         elif score_table[start_location[0], start_location[1], 3] == 1:
-            start_location = (start_location[0], start_location[1]-1)
             mutations.append({
                 "type": "delete",
                 "ref_idx": start_location[1] - 1 + ref_start_idx
             })
+            start_location = (start_location[0], start_location[1]-1)
         else:
             start_location = None
 
-    ipdb.set_trace()
+    # reverse the mutation list to get correct order in order of reference genome
+    mutations.reverse()
     return mutations
 
 if __name__ == "__main__":
@@ -157,4 +175,5 @@ if __name__ == "__main__":
 
     # align each reads
     for one_read in reads[0:1]:
+        # ipdb.set_trace()
         align_one_read_pair(one_read)
