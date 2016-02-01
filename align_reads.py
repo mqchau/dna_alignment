@@ -159,6 +159,15 @@ def align_read_by_local_alignment(ref, read, ref_start_idx):
 
     # reverse the mutation list to get correct order in order of reference genome
     mutations.reverse()
+
+    # scan through the insert and put in the offset of insert in respect to the base of reference it inserts to
+    for mut_idx, one_mutation in enumerate(mutations):
+        if one_mutation["type"] == "insert":
+            if "insert_idx" in mutations[mut_idx-1]:
+                mutations[mut_idx]["insert_idx"] = mutations[mut_idx-1]["insert_idx"] + 1
+            else:
+                mutations[mut_idx]["insert_idx"] = 1
+
     return mutations
 
 if __name__ == "__main__":
