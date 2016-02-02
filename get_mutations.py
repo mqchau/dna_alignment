@@ -5,7 +5,6 @@ import commonlib
 import numpy as np
 
 db = None
-reference_genome = None
 
 def get_most_common_new_base(snp_list):
     base_count = np.zeros(4, dtype=np.uint32)
@@ -87,12 +86,16 @@ def save_all_mutations(mutations):
     for one_mut in mutations["del"]:
         db.execute("INSERT INTO mutation (ref_idx, mutation_type) VALUES (%d, %d)" % (one_mut["ref_idx"], 1))
 
-if __name__ == "__main__":
-    global db, reference_genome
+def work_small_job(datafile, start_idx, stop_idx):
+    global db
     db = database.create_database_connection()
 
-    # read reference genome
-    reference_genome = commonlib.read_reference_genome('dataset/practice1/ref.txt')
+    get_mutations(start_idx, stop_idx)
+
+
+if __name__ == "__main__":
+    global db
+    db = database.create_database_connection()
 
     # delete all saved mutations from database
     db.execute("DELETE FROM mutation")

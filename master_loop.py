@@ -1,12 +1,13 @@
-import sqsclient
+import sqs_client
 import time
 import re
 import commonlib
+import database
 
 datafile = None
 
 def get_data_file_to_work(message):
-    return message.rstrip().split(',')[1]
+    return message.body.rstrip().split(',')[1]
 
 def wait_job_start_loop():
     inloop = True
@@ -20,11 +21,13 @@ def wait_job_start_loop():
 
     global datafile
     datafile = get_data_file_to_work(message)
-    if re.search('reference_hash', message):
+    message_body = message.body
+    message.delete()
+    if re.search('reference_hash', message_body):
         start_create_hash_from_ref()
-    elif re.search('align_base', message):
+    elif re.search('align_base', message_body):
         start_align_base()
-    elif re.search('get_mutation', message):
+    elif re.search('get_mutation', message_body):
         start_get_mutation()
 
 def start_create_hash_from_ref():
@@ -36,10 +39,10 @@ def start_create_hash_from_ref():
     db = database.create_database_connection()
     db.execute("DELETE FROM reference_hash")
 
-    reference_arr = commonlib.read_reference_genome('dataset/%d/ref.txt' % datafile)
+    reference_arr = commonlib.read_reference_genome('dataset/%s/ref.txt' % datafile)
     offset = 1000
     for i in xrange(0, len(reference_arr), offset):
-        sqsclient.send_message('reference_hash', '%s,%d,%d' % (datafile, i, i+offset))
+        sqs_client.send_message('reference_hash', '%s,%d,%d' % (datafile, i, i+offset))
 
     wait_reference_hash_loop()
 
@@ -60,12 +63,12 @@ def start_align_base():
 
     # delete all saved reference genome hash
     db = database.create_database_connection()
-    db.execute("DELETE FROM reference_hash")
+    db.execute("DELETE FROM aligned_bases")
 
     reads = commonlib.read_all_reads("dataset/%s/reads.txt" % datafile)
     offset = 1
-    for i in xrange(0, len(reference_arr), offset):
-        sqsclient.send_message('align_base', '%s,%d,%d' % (datafile, i, i+offset))
+    for i in xrange(0, len(reads), offset):
+        sqs_client.send_message('align_base', '%s,%d,%d' % (datafile, i, i+offset))
 
     wait_align_base_loop()
 
@@ -89,10 +92,10 @@ def start_get_mutation():
     db = database.create_database_connection()
     db.execute("DELETE FROM mutation")
 
-    reference_arr = commonlib.read_reference_genome('dataset/%d/ref.txt' % datafile)
+    reference_arr = commonlib.read_reference_genome('dataset/%s/ref.txt' % datafile)
     offset = 5
     for i in xrange(0, len(reference_arr), offset):
-        sqsclient.send_message('get_mutation', '%s,%d,%d' % (datafile, i, i+offset))
+        sqs_client.send_message('get_mutation', '%s,%d,%d' % (datafile, i, i+offset))
 
     wait_get_mutation_loop()
 

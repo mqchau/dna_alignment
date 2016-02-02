@@ -5,6 +5,8 @@ import numpy as np
 
 db = None
 reference_genome = None
+all_ref = {}
+all_reads = {}
 
 # define how to score in local alignment process
 mismatch = -1
@@ -220,6 +222,22 @@ def align_read_by_local_alignment(ref, read, ref_start_idx):
                 mutations[mut_idx]["insert_idx"] = 1
 
     return max_global_score, mutations
+
+
+def work_small_job(datafile, start_idx, stop_idx):
+    global all_ref, all_reads, db, reference_genome
+    db = database.create_database_connection()
+    if datafile not in all_ref or datafile not in all_reads:
+        all_ref[datafile] = commonlib.read_reference_genome('dataset/%s/ref.txt' % datafile)
+        all_reads[datafile] = commonlib.read_all_reads("dataset/%s/reads.txt" % datafile)
+
+    reference_genome = all_ref[datafile]
+
+    for one_read in all_reads[datafile][start_idx:stop_idx]:
+        mutation_list = align_one_read_pair(one_read)
+        if len(mutation_list) == 0:
+            print "can't align read %d" % start_idx
+        save_mutation_to_db(mutation_list)
 
 if __name__ == "__main__":
     # delete all saved aligned reads

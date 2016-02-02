@@ -14,9 +14,11 @@ RUN git clone https://github.com/mqchau/dna_alignment /tmp
 WORKDIR /tmp
 
 # download the ref and reads file
-RUN mkdir -p /tmp/dataset/ugrad
-RUN wget -O /tmp/dataset/ugrad/ref_ugrad.txt https://s3-us-west-2.amazonaws.com/cm124-hw/ref_ugrad.txt
-RUN wget -O /tmp/dataset/ugrad/reads_ugrad.txt https://s3-us-west-2.amazonaws.com/cm124-hw/reads_ugrad.txt
+RUN mkdir -p /tmp/dataset/ugrad /tmp/dataset/grad /tmp/dataset/practice
+RUN wget -O /tmp/dataset/ugrad/ref.txt https://s3-us-west-2.amazonaws.com/cm124-hw/ref_ugrad.txt
+RUN wget -O /tmp/dataset/ugrad/reads.txt https://s3-us-west-2.amazonaws.com/cm124-hw/reads_ugrad.txt
+RUN wget -O /tmp/dataset/practice/ref.txt https://s3-us-west-2.amazonaws.com/cm124-hw/ref_practice.txt
+RUN wget -O /tmp/dataset/practice/reads.txt https://s3-us-west-2.amazonaws.com/cm124-hw/reads_practice.txt
 
 # set up env for RDS instance
 ENV RDS_HOST cm124-hw-db.cujwspoan2k0.us-west-2.rds.amazonaws.com

@@ -1,6 +1,7 @@
 import commonlib
 import database
 
+all_ref = {}
 
 def save_hash_location(mer_str, location):
     db = database.create_database_connection()
@@ -22,6 +23,12 @@ def create_reference_hash(start_idx, stop_idx, mer_length, reference):
         mer = reference[i:i+mer_length]
         mer_str = commonlib.get_string_from_mer(mer)
         save_hash_location(mer_str, i)
+
+def work_small_job(datafile, start_idx, stop_idx):
+    global all_ref
+    if datafile not in all_ref:
+        all_ref[datafile] = commonlib.read_reference_genome('dataset/%s/ref.txt' % datafile)
+    create_reference_hash(start_idx,stop_idx,16, all_ref[datafile])
 
 if __name__ == "__main__":
     # delete all saved reference genome hash
