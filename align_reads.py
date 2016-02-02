@@ -176,9 +176,8 @@ def align_read_by_local_alignment(ref, read, ref_start_idx):
 
     # start tracing back
     if len(max_global_location) == 0:
-        ipdb.set_trace()
-        raise Exception("Couldn't find any cell with max score to start tracing back")
-    
+        return 0, []
+
     start_location = max_global_location
     mutations = []
     while start_location is not None and start_location[0] > 0 and start_location[1] > 0:
@@ -224,7 +223,7 @@ def align_read_by_local_alignment(ref, read, ref_start_idx):
 
 if __name__ == "__main__":
     # delete all saved aligned reads
-    global db
+    global db, reference_genome
     db = database.create_database_connection()
     db.execute("DELETE FROM aligned_bases")
 
