@@ -28,14 +28,14 @@ def get_ins_str(insert_list):
             break_cond = True
     return ins_str
 
-def get_mutations():
+def get_mutations(ref_start_idx, ref_end_idx):
     all_mutations = {
         "snp": [],
         "ins": [],
         "del": []
     }
 
-    for ref_idx in xrange(len(reference_genome)):
+    for ref_idx in xrange(ref_start_idx, ref_end_idx):
         # from database get list of aligned bases related to this ref_idx
         query = db.execute("SELECT * FROM aligned_bases WHERE ref_idx = %d" % ref_idx)
 
@@ -73,8 +73,20 @@ def get_mutations():
                     "ins_str": get_ins_str(filter(lambda x: x["mutation_type"] == 2, mutations_at_ref))
                 })
 
+    # save these mutations to database
+    save_all_mutations(all_mutations)
     return all_mutations
             
+def save_all_mutations(mutations):
+    for one_mut in mutations["snp"]:
+        db.execute("INSERT INTO mutation (ref_idx, mutation_type, new_base) VALUES (%d, %d, %d)" % (one_mut["ref_idx"], 3, one_mut["new_base"]))
+
+    for one_mut in mutations["ins"]:
+        db.execute("INSERT INTO mutation (ref_idx, mutation_type, ins_str) VALUES (%d, %d, '%s')" % (one_mut["ref_idx"], 2, one_mut["ins_str"]))
+
+    for one_mut in mutations["del"]:
+        db.execute("INSERT INTO mutation (ref_idx, mutation_type) VALUES (%d, %d)" % (one_mut["ref_idx"], 1))
+
 if __name__ == "__main__":
     global db, reference_genome
     db = database.create_database_connection()
@@ -82,9 +94,11 @@ if __name__ == "__main__":
     # read reference genome
     reference_genome = commonlib.read_reference_genome('dataset/practice1/ref.txt')
 
-    # figure out the mutations at each base
-    all_mutations = get_mutations()
+    # delete all saved mutations from database
+    db.execute("DELETE FROM mutation")
 
+    # figure out the mutations at each base
+    all_mutations = get_mutations(0, 1500)
 
     pp = pprint.PrettyPrinter(indent=2)
     pp.pprint(all_mutations)

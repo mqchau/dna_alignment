@@ -32,6 +32,6 @@ CREATE TABLE IF NOT EXISTS mutation (
     id SERIAL,
     ref_idx         INTEGER,
     mutation_type   INTEGER,
-    insert_str      VARCHAR(100),
+    ins_str      VARCHAR(100),
     new_base        INTEGER
 );
