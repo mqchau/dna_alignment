@@ -2,3 +2,4 @@ dataset
 *swp
 *.pyc
 *.swo
+dont_commit_*
