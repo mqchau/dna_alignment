@@ -40,6 +40,19 @@ def debug_print_mutations(mutation_list):
     print "Refer: %s\nDonor: %s" % (ref_string, read_string)
 
 
+def save_mutation_to_db(mutation_pair):
+    for mutation_list in mutation_pair:
+        for one_base in mutation_list:
+            if one_base["type"] == "insert":
+                db.execute("INSERT INTO aligned_bases (ref_idx, mutation_type, insert_idx, new_base) VALUES (%d, %d, %d, %d)" % (one_base["ref_idx"], 2, one_base["insert_idx"], one_base["base"]))
+            elif one_base["type"] == "match":
+                db.execute("INSERT INTO aligned_bases (ref_idx, mutation_type, new_base) VALUES (%d, %d, %d)" % (one_base["ref_idx"], 4, one_base["base"]))
+            elif one_base["type"] == "mismatch":
+                db.execute("INSERT INTO aligned_bases (ref_idx, mutation_type, new_base) VALUES (%d, %d, %d)" % (one_base["ref_idx"], 3, one_base["base"]))
+            elif one_base["type"] == "delete":
+                db.execute("INSERT INTO aligned_bases (ref_idx, mutation_type) VALUES (%d, %d)" % (one_base["ref_idx"], 1))
+
+
 def align_one_read_pair(read_pair):
     # align two reads by hashing
     possible_matches = align_read_pair_by_hash(read_pair)
@@ -222,10 +235,11 @@ if __name__ == "__main__":
     reads = commonlib.read_all_reads("dataset/practice1/reads.txt")
 
     # align each reads
-    for read_idx, one_read in enumerate(reads[1400:]):
-        # ipdb.set_trace()
+    for read_idx, one_read in enumerate(reads):
         mutation_list = align_one_read_pair(one_read)
-        if len(mutation_list) > 0:
+        save_mutation_to_db(mutation_list)
+        # if len(mutation_list) > 0:
+        if read_idx % 50 == 0:
             print "-----------------------%05d---------------------------" % read_idx
-            debug_print_mutations(mutation_list[0])
-            debug_print_mutations(mutation_list[1])
+        #     debug_print_mutations(mutation_list[0])
+        #     debug_print_mutations(mutation_list[1])
