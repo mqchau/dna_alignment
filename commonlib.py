@@ -7,6 +7,12 @@ def convert_genome_str_to_int(genome_str):
     conversion_table = { "A": 1, "C": 2, "G": 3, "T":4 }
     return map(lambda x: conversion_table[x], genome_str)
 
+# convert from int back to char
+# 1->A, 2->C, 3->G, 4->T
+def get_base_from_int(num):
+    conversion_table = ['A', 'C', 'G', 'T']
+    return conversion_table[num-1]
+
 # given a list of base like 1,2,3,4 return a string combining them like 1234
 def get_string_from_mer(mer):
     return "".join(map(lambda x: "%d" % x, mer))
