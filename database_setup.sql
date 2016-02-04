@@ -9,6 +9,13 @@ CREATE TABLE IF NOT EXISTS reference_hash (
 
 CREATE INDEX mer_hash ON reference_hash USING hash (mer);
 
+CREATE TABLE IF NOT EXISTS read (
+    idx         INTEGER,
+    left_read   CHAR(50),
+    right_read  CHAR(50),
+    PRIMARY KEY (idx)
+);
+
 -- This table is used to store the result after we do local alignment after hashing match
 -- ref_idx = location in reference genome this is happening
 -- mutation_type: 1 for delete, 2 for insert, 3 for SNP, 4 for match

@@ -6,7 +6,6 @@ import numpy as np
 db = None
 reference_genome = None
 all_ref = {}
-all_reads = {}
 
 # define how to score in local alignment process
 mismatch = -1
@@ -304,17 +303,30 @@ def align_read_by_local_alignment(ref, read, ref_start_idx):
 
     return max_global_score, mutations
 
+def get_all_reads_to_work(start_idx, stop_idx):
+    global db
+
+    query_result = db.execute("SELECT * FROM read WHERE idx >= %d AND idx < %d" % (start_idx, stop_idx))
+    if query_result is None:
+        return []
+
+    return map(lambda x: [
+        commonlib.get_mer_from_int_str(x['left_read']), 
+        commonlib.get_mer_from_int_str(x['right_read'])
+    ], query_result.fetchall())
+        
 
 def work_small_job(datafile, start_idx, stop_idx):
-    global all_ref, all_reads, db, reference_genome
+    global all_ref, db, reference_genome
     db = database.create_database_connection()
-    if datafile not in all_ref or datafile not in all_reads:
+    if datafile not in all_ref:
         all_ref[datafile] = commonlib.read_reference_genome('dataset/%s/ref.txt' % datafile)
-        all_reads[datafile] = commonlib.read_all_reads("dataset/%s/reads.txt" % datafile)
 
     reference_genome = all_ref[datafile]
 
-    for relative_read_idx, one_read in enumerate(all_reads[datafile][start_idx:stop_idx]):
+    all_reads_to_work = get_all_reads_to_work(start_idx, stop_idx)
+
+    for relative_read_idx, one_read in enumerate(all_reads_to_work):
         mutation_list = align_one_read_pair(one_read)
         if len(mutation_list) == 0:
             print "can't align read %d" % (start_idx + relative_read_idx)
@@ -328,9 +340,6 @@ if __name__ == "__main__":
 
     # read reference genome
     reference_genome = commonlib.read_reference_genome('dataset/practice1/ref.txt')
-
-    # read in all reads
-    reads = commonlib.read_all_reads("dataset/practice1/reads.txt")
 
     # match_score, mutations = align_read_by_local_alignment(reference_genome, reads[2][1], 0)
     

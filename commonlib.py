@@ -11,6 +11,11 @@ def convert_genome_str_to_int(genome_str):
 def get_string_from_mer(mer):
     return "".join(map(lambda x: "%d" % x, mer))
 
+# given a string of int 1,2,3,4 return a numpy array of those number
+def get_mer_from_int_str(int_str):
+    return np.array(map(lambda x: int(x), int_str), dtype=np.uint8)
+
+
 # read the reference genome into a np array
 def read_reference_genome(ref_file):
     with open(ref_file, "r") as f:

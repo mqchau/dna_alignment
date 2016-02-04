@@ -54,17 +54,23 @@ def wait_job_start_loop():
 
 def start_create_hash_from_ref():
     global datafile
+    db = database.create_database_connection()
+
+    print "save all reads to database"
+    db.execute("DELETE FROM read")
+    reads = commonlib.read_all_reads("dataset/%s/reads.txt" % datafile)
+    for i in xrange(0, len(reads)):
+        db.execute("INSERT INTO read (idx, left_read, right_read ) VALUES (%d, '%s', '%s')" %
+            (i, commonlib.get_string_from_mer(reads[i][0]), commonlib.get_string_from_mer(reads[i][1])))
 
     print "start creating hash from reference"
 
     # delete all saved reference genome hash
-    db = database.create_database_connection()
     db.execute("DELETE FROM reference_hash")
 
     reference_arr = commonlib.read_reference_genome('dataset/%s/ref.txt' % datafile)
     offset = 1000
-    # for i in xrange(0, len(reference_arr), offset):
-    for i in xrange(0, 4000, offset):
+    for i in xrange(0, len(reference_arr), offset):
         sqs_client.send_message('reference_hash', '%s,%d,%d' % (datafile, i, i+offset))
 
     return 'wait_reference_hash'
@@ -90,8 +96,7 @@ def start_align_base():
 
     reads = commonlib.read_all_reads("dataset/%s/reads.txt" % datafile)
     offset = 1
-    # for i in xrange(0, len(reads), offset):
-    for i in xrange(0, 10, offset):
+    for i in xrange(0, len(reads), offset):
         sqs_client.send_message('align_base', '%s,%d,%d' % (datafile, i, i+offset))
 
     return 'wait_align_base'
