@@ -71,6 +71,7 @@ def align_one_read_pair(read_pair):
                 one_possible_match[0]["approx_end"]], 
             oriented_read, one_possible_match[0]["approx_start"])
 
+
         # align 2nd read by local alignment
         oriented_read = read_pair[1] if one_possible_match[1]["direction"] == "forward" else np.flipud(read_pair[1])
         match_score_right, right_mutations = align_read_by_local_alignment(
@@ -78,6 +79,7 @@ def align_one_read_pair(read_pair):
                 one_possible_match[1]["approx_start"]: 
                 one_possible_match[1]["approx_end"]], 
             oriented_read, one_possible_match[1]["approx_start"])
+
         
         if match_score_left + match_score_right > max_match_score:
             max_match_score = match_score_left + match_score_right
@@ -90,14 +92,84 @@ def align_read_pair_by_hash(read_pair):
     hash_match_right = align_one_read_by_hash(read_pair[1])
 
     match_result = []
+
+    # if we assume that two possible places of left read and right reads are not very far from each other
     for left_match in hash_match_left:
         for right_match in hash_match_right:
             match_distance = abs(left_match["approx_start"] - right_match["approx_start"]) 
             if match_distance > 70+50 and match_distance < 130 + 50:
                 match_result.append([ left_match, right_match ])
 
-    # if len(match_result) == 0:
-    #     ipdb.set_trace()
+    # in case we fail that, go through each possible matched hash then target area around it
+    if len(match_result) == 0:
+        for left_match in hash_match_left:
+            match_result.append([
+                left_match,
+                { 
+                    'approx_start': left_match['approx_start'] + 50 + 70,
+                    'approx_end': left_match['approx_start'] + 50 + 140,
+                    'direction': 'forward'
+                }
+            ])
+            match_result.append([
+                left_match,
+                { 
+                    'approx_start': left_match['approx_start'] + 50 + 70,
+                    'approx_end': left_match['approx_start'] + 50 + 140,
+                    'direction': 'backward'
+                }
+            ])
+            match_result.append([
+                left_match,
+                { 
+                    'approx_start': left_match['approx_start'] - 50 - 140,
+                    'approx_end': left_match['approx_start'] - 50 - 70,
+                    'direction': 'forward'
+                }
+            ])
+            match_result.append([
+                left_match,
+                { 
+                    'approx_start': left_match['approx_start'] - 50 - 140,
+                    'approx_end': left_match['approx_start'] - 50 - 70,
+                    'direction': 'backward'
+                }
+            ])
+
+        for right_match in hash_match_right:
+            match_result.append([
+                { 
+                    'approx_start': right_match['approx_start'] - 50 - 140,
+                    'approx_end': right_match['approx_start'] - 50 - 70,
+                    'direction': 'forward'
+                },
+                right_match
+            ])
+            match_result.append([
+                { 
+                    'approx_start': right_match['approx_start'] - 50 - 140,
+                    'approx_end': right_match['approx_start'] - 50 - 70,
+                    'direction': 'backward'
+                },
+                right_match
+            ])
+            match_result.append([
+                { 
+                    'approx_start': right_match['approx_start'] + 50 + 70,
+                    'approx_end': right_match['approx_start'] + 50 + 140,
+                    'direction': 'forward'
+                },
+                right_match
+            ])
+            match_result.append([
+                { 
+                    'approx_start': right_match['approx_start'] + 50 + 70,
+                    'approx_end': right_match['approx_start'] + 50 + 140,
+                    'direction': 'backward'
+                },
+                right_match
+            ])
+
 
     return match_result
 
@@ -108,21 +180,30 @@ def align_one_read_by_hash(read):
         if direction == "backward":
             read = np.flipud(read)
 
-        # cut read into 16 - 16 - 16
-        sub_sections = [read[0:16], read[16:32], read[32:48]]
+        # cut read into 12 - 12 - 12
+        section_length = 8
+        sub_sections = []
+        move_length = 8
+        for i in xrange(0, 50 - section_length, move_length):
+            # ipdb.set_trace()
+            sub_sections.append({
+                'str': read[i:i+section_length],
+                'offset': i
+            })
 
         for sub_idx, one_sub in enumerate(sub_sections):
             # find if this subsection is in reference hash
             # print commonlib.get_string_from_mer(one_sub)
-            query = db.execute("SELECT location FROM reference_hash WHERE mer = '%s'" % commonlib.get_string_from_mer(one_sub))
+            query = db.execute("SELECT location FROM reference_hash WHERE mer = '%s'" % commonlib.get_string_from_mer(one_sub['str']))
             matches = query.fetchone()
+            # print commonlib.get_string_from_mer(one_sub['str']), matches
             if matches is not None:
                 # found a match
                 for one_match in matches[0]:
                     # to account for indel
                     # we pad a 10 bases at the front and end of the match
                     # later on we'll use local alignment
-                    approx_start = one_match - 16 * sub_idx - 10
+                    approx_start = one_match - one_sub['offset']- 10
                     if approx_start < 0:
                         approx_start = 0
                     approx_end = approx_start + 80
@@ -233,10 +314,10 @@ def work_small_job(datafile, start_idx, stop_idx):
 
     reference_genome = all_ref[datafile]
 
-    for one_read in all_reads[datafile][start_idx:stop_idx]:
+    for relative_read_idx, one_read in enumerate(all_reads[datafile][start_idx:stop_idx]):
         mutation_list = align_one_read_pair(one_read)
         if len(mutation_list) == 0:
-            print "can't align read %d" % start_idx
+            print "can't align read %d" % (start_idx + relative_read_idx)
         save_mutation_to_db(mutation_list)
 
 if __name__ == "__main__":
@@ -251,12 +332,24 @@ if __name__ == "__main__":
     # read in all reads
     reads = commonlib.read_all_reads("dataset/practice1/reads.txt")
 
-    # align each reads
-    for read_idx, one_read in enumerate(reads):
-        mutation_list = align_one_read_pair(one_read)
-        save_mutation_to_db(mutation_list)
-        # if len(mutation_list) > 0:
-        if read_idx % 50 == 0:
-            print "-----------------------%05d---------------------------" % read_idx
-        #     debug_print_mutations(mutation_list[0])
-        #     debug_print_mutations(mutation_list[1])
+    # match_score, mutations = align_read_by_local_alignment(reference_genome, reads[2][1], 0)
+    
+    work_small_job("practice", 0, 10 )
+
+
+    # print align_one_read_by_hash(reads[2][0])
+    # print align_one_read_by_hash(reads[2][1])
+
+    # debug_print_mutations(mutations)
+
+    # # align each reads
+    # for read_idx, one_read in enumerate(reads[2:3]):
+    #     mutation_list = align_one_read_pair(one_read)
+    #     save_mutation_to_db(mutation_list)
+    #     # if len(mutation_list) > 0:
+    #     if len(mutation_list) == 0:
+    #         print "can't align read %d" % read_idx
+    #     if read_idx % 50 == 0:
+    #         print "-----------------------%05d---------------------------" % read_idx
+    #     #     debug_print_mutations(mutation_list[0])
+    #     #     debug_print_mutations(mutation_list[1])

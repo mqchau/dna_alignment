@@ -28,7 +28,7 @@ def work_small_job(datafile, start_idx, stop_idx):
     global all_ref
     if datafile not in all_ref:
         all_ref[datafile] = commonlib.read_reference_genome('dataset/%s/ref.txt' % datafile)
-    create_reference_hash(start_idx,stop_idx,16, all_ref[datafile])
+    create_reference_hash(start_idx,stop_idx,8, all_ref[datafile])
 
 if __name__ == "__main__":
     # delete all saved reference genome hash
@@ -37,4 +37,4 @@ if __name__ == "__main__":
 
     # read reference genome and populate database
     reference_arr = commonlib.read_reference_genome('dataset/practice1/ref.txt')
-    create_reference_hash(0,len(reference_arr),16, reference_arr)
+    create_reference_hash(0,len(reference_arr),8, reference_arr)
