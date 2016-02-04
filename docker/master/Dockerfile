@@ -21,7 +21,7 @@ RUN wget -O /tmp/dataset/practice/ref.txt https://s3-us-west-2.amazonaws.com/cm1
 RUN wget -O /tmp/dataset/practice/reads.txt https://s3-us-west-2.amazonaws.com/cm124-hw/reads_practice.txt
 
 # set up env for RDS instance
-ENV RDS_HOST cm124-hw-db.cujwspoan2k0.us-west-2.rds.amazonaws.com
+ENV RDS_HOST cm124-hw.cujwspoan2k0.us-west-2.rds.amazonaws.com
 ENV RDS_PORT 5432
 ENV RDS_DATABASE bioinfo
 

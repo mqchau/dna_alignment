@@ -14,7 +14,7 @@ RUN git clone https://github.com/mqchau/dna_alignment /tmp
 WORKDIR /tmp
 
 # set up env for RDS instance
-ENV RDS_HOST cm124-hw-db.cujwspoan2k0.us-west-2.rds.amazonaws.com
+ENV RDS_HOST cm124-hw.cujwspoan2k0.us-west-2.rds.amazonaws.com
 ENV RDS_PORT 5432
 ENV RDS_DATABASE bioinfo
 
