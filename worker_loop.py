@@ -1,4 +1,5 @@
 import sqs_client
+import ipdb
 import time
 import re
 import commonlib
@@ -6,6 +7,8 @@ import reference_hash
 import align_reads
 import get_mutations
 import database
+import multiprocessing as mp
+import argparse
 
 def extract_datafile_idx(message_str):
     splitted = message_str.rstrip().split(',')
@@ -43,7 +46,30 @@ def wait_master_loop():
         print "waiting for new job"
         time.sleep(2)
 
+def run_worker_multiple_process(num_process):
+    # Setup a list of processes that we want to run
+    processes = [mp.Process(target=wait_master_loop) for x in range(num_process)]
+
+    # Run processes
+    for p in processes:
+        p.start()
+
+    # Exit the completed processes
+    for p in processes:
+        p.join()
 
 if __name__ == "__main__":
-    # wait for start job signal
-    wait_master_loop()
+    # parse arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--numworker", help="how many worker process to run", type=int)
+    args = parser.parse_args()
+    
+    # get number of worker
+    if args.numworker is not None:
+        numworker = args.numworker
+    else:
+        # if not indicated, num processor + 1
+        numworker = mp.cpu_count() + 2
+
+    # run workers
+    run_worker_multiple_process(numworker)
