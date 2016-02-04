@@ -9,6 +9,27 @@ datafile = None
 def get_data_file_to_work(message):
     return message.body.rstrip().split(',')[1]
 
+def master_loop():
+    curr_state = "wait_job_start"
+    while True:
+        # find out what loop to run
+        loop_to_run = get_loop_to_run(curr_state)
+        # run the loop and get next state
+        curr_state = loop_to_run()
+
+def get_loop_to_run(state_name):
+    state_table = {
+        'wait_job_start': wait_job_start_loop,
+        'create_hash_from_ref': start_create_hash_from_ref,
+        'wait_reference_hash': wait_reference_hash_loop,
+        'align_base': start_align_base,
+        'wait_align_base': wait_align_base_loop,
+        'get_mutation': start_get_mutation,
+        'wait_get_mutation': wait_get_mutation_loop
+    }
+
+    return state_table[state_name]
+
 def wait_job_start_loop():
     inloop = True
     message = None
@@ -24,11 +45,12 @@ def wait_job_start_loop():
     message_body = message.body
     message.delete()
     if re.search('reference_hash', message_body):
-        start_create_hash_from_ref()
+        return 'create_hash_from_ref'
     elif re.search('align_base', message_body):
-        start_align_base()
+        return 'align_base'
     elif re.search('get_mutation', message_body):
-        start_get_mutation()
+        return 'get_mutation'
+
 
 def start_create_hash_from_ref():
     global datafile
@@ -41,10 +63,11 @@ def start_create_hash_from_ref():
 
     reference_arr = commonlib.read_reference_genome('dataset/%s/ref.txt' % datafile)
     offset = 1000
-    for i in xrange(0, len(reference_arr), offset):
+    # for i in xrange(0, len(reference_arr), offset):
+    for i in xrange(0, 4000, offset):
         sqs_client.send_message('reference_hash', '%s,%d,%d' % (datafile, i, i+offset))
 
-    wait_reference_hash_loop()
+    return 'wait_reference_hash'
 
 def wait_reference_hash_loop():
     inloop = True
@@ -54,7 +77,7 @@ def wait_reference_hash_loop():
             time.sleep(5)
         else:
             inloop = False
-    start_align_base()
+    return 'align_base'
 
 def start_align_base():
     global datafile
@@ -67,10 +90,11 @@ def start_align_base():
 
     reads = commonlib.read_all_reads("dataset/%s/reads.txt" % datafile)
     offset = 1
-    for i in xrange(0, len(reads), offset):
+    # for i in xrange(0, len(reads), offset):
+    for i in xrange(0, 10, offset):
         sqs_client.send_message('align_base', '%s,%d,%d' % (datafile, i, i+offset))
 
-    wait_align_base_loop()
+    return 'wait_align_base'
 
 def wait_align_base_loop():
     inloop = True
@@ -80,7 +104,7 @@ def wait_align_base_loop():
             time.sleep(5)
         else:
             inloop = False
-    start_get_mutation()
+    return 'get_mutation'
 
 def start_get_mutation():
 
@@ -97,7 +121,7 @@ def start_get_mutation():
     for i in xrange(0, len(reference_arr), offset):
         sqs_client.send_message('get_mutation', '%s,%d,%d' % (datafile, i, i+offset))
 
-    wait_get_mutation_loop()
+    return 'wait_get_mutation'
 
 def wait_get_mutation_loop():
     inloop = True
@@ -107,8 +131,8 @@ def wait_get_mutation_loop():
             time.sleep(5)
         else:
             inloop = False
-    wait_job_start_loop()
+    return 'wait_job_start'
 
 if __name__ == "__main__":
-    # wait for start job signal
-    wait_job_start_loop()
+    # run master loop
+    master_loop()

@@ -2,6 +2,7 @@ import commonlib
 import database
 
 all_ref = {}
+mer_length = 10
 
 def save_hash_location(mer_str, location):
     db = database.create_database_connection()
@@ -28,7 +29,7 @@ def work_small_job(datafile, start_idx, stop_idx):
     global all_ref
     if datafile not in all_ref:
         all_ref[datafile] = commonlib.read_reference_genome('dataset/%s/ref.txt' % datafile)
-    create_reference_hash(start_idx,stop_idx,8, all_ref[datafile])
+    create_reference_hash(start_idx,stop_idx,mer_length, all_ref[datafile])
 
 if __name__ == "__main__":
     # delete all saved reference genome hash
@@ -37,4 +38,4 @@ if __name__ == "__main__":
 
     # read reference genome and populate database
     reference_arr = commonlib.read_reference_genome('dataset/practice1/ref.txt')
-    create_reference_hash(0,len(reference_arr),8, reference_arr)
+    create_reference_hash(0,len(reference_arr),mer_length, reference_arr)

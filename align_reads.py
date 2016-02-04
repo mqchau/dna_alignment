@@ -180,10 +180,10 @@ def align_one_read_by_hash(read):
         if direction == "backward":
             read = np.flipud(read)
 
-        # cut read into 12 - 12 - 12
-        section_length = 8
+        # cut read into 10 - 10 - 10 - 10 - 10
+        section_length = 10
         sub_sections = []
-        move_length = 8
+        move_length = 10
         for i in xrange(0, 50 - section_length, move_length):
             # ipdb.set_trace()
             sub_sections.append({
