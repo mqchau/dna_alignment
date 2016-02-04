@@ -26,6 +26,9 @@ ENV RDS_HOST cm124-hw.cujwspoan2k0.us-west-2.rds.amazonaws.com
 ENV RDS_PORT 5432
 ENV RDS_DATABASE bioinfo
 
+# expose some thing, just because elastic beanstalk like so
+EXPOSE 80
+
 # run worker loop
 CMD ["python", "worker_loop.py"]
 

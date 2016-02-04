@@ -26,6 +26,8 @@ ENV RDS_HOST cm124-hw.cujwspoan2k0.us-west-2.rds.amazonaws.com
 ENV RDS_PORT 5432
 ENV RDS_DATABASE bioinfo
 
+EXPOSE 80
+
 # run worker loop
 CMD ["python", "master_loop.py"]
 
