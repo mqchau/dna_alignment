@@ -1,7 +1,8 @@
 FROM ubuntu:14.04
 
-RUN apt-get install python python-dev pip libpq-dev git wget
-RUN pip install psycopg2 sqlalchemy numpy boto3
+RUN apt-get update
+RUN apt-get install -y python python-dev python-pip libpq-dev git wget python-numpy
+RUN pip install psycopg2 sqlalchemy boto3 ipdb
 
 # copy the aws credentials over
 RUN mkdir /root/.aws

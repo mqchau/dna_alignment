@@ -40,6 +40,7 @@ def wait_master_loop():
             message.delete()
             continue
 
+        print "waiting for new job"
         time.sleep(2)
 
 
