@@ -41,6 +41,16 @@ def read_reference_genome(ref_file):
 
     return return_array
 
+# read the reference genome into a very long string
+def read_reference_genome_bare(ref_file):
+    with open(ref_file, "r") as f:
+        lines = f.readlines()
+    
+    del lines[0]
+    lines = map(lambda x: x.rstrip(), lines)
+
+    return "".join(lines)
+
 # read the reads.txt input file and create 2d array, 
 # each nucleotid is also represented as integer
 def read_all_reads(reads_file):    
