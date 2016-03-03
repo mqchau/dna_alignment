@@ -1,3 +1,4 @@
+import pickle
 import commonlib
 import database
 import ipdb
@@ -314,7 +315,58 @@ def get_all_reads_to_work(start_idx, stop_idx):
         commonlib.get_mer_from_int_str(x['left_read']), 
         commonlib.get_mer_from_int_str(x['right_read'])
     ], query_result.fetchall())
+
+
+# def align_one_read_pair_new(
         
+def get_read_pair_by_idx(idx):
+    query_result = db.execute("SELECT * FROM read_raw WHERE idx = %d" % read_idx).fetchone()
+    
+    if query_result is None:
+        return None
+
+    return [query_result.left_read, query_result.right_read]
+
+def align_read_new(reference_genome, reference_hash, read_pair):
+
+    left_read = read_pair[0]
+    right_read = read_pair[1]
+
+    # try align left in order read first
+    possible_locations = align_read_by_hash_new(left_read[::-1], reference_hash)
+    print "**************************************************"
+    possible_locations = align_read_by_hash_new(right_read, reference_hash)
+
+    ipdb.set_trace()
+
+
+def align_read_by_hash_new(read, reference_hash):
+
+    # cut read into 10 - 10 - 10 - 10 - 10
+    section_length = 10
+    sub_sections = []
+    move_length = 10
+    for i in xrange(0, 50 - section_length+1, move_length):
+        # ipdb.set_trace()
+        sub_sections.append({
+            'str': read[i:i+section_length],
+            'offset': i
+        })
+
+    possible_position = set()
+    for section_idx, sub_section in enumerate(sub_sections):
+        print sub_section['str']
+        print sub_section['offset']
+        if sub_section['str'] in reference_hash:
+            for location in reference_hash[sub_section['str']]:
+                possible_position.add(location)
+                print location
+        print "-------------------------------"
+
+    return possible_position
+
+
+
 
 def work_small_job(datafile, start_idx, stop_idx):
     global all_ref, db, reference_genome
@@ -336,14 +388,26 @@ if __name__ == "__main__":
     # delete all saved aligned reads
     global db, reference_genome
     db = database.create_database_connection()
-    db.execute("DELETE FROM aligned_bases")
+    # db.execute("DELETE FROM aligned_bases")
 
     # read reference genome
-    reference_genome = commonlib.read_reference_genome('dataset/practice1/ref.txt')
+    reference_genome = commonlib.read_reference_genome_bare('dataset/practice2/ref.txt')
+
+
+    # read the reference hash
+    with open("all_hash_location.pickle", "rb") as f:
+        reference_hash = pickle.load(f)
+
+    # align one read pair
+    read_idx = 2
+    read_pair = get_read_pair_by_idx(read_idx)
+
+    align_read_new(reference_genome, reference_hash, read_pair)
+
 
     # match_score, mutations = align_read_by_local_alignment(reference_genome, reads[2][1], 0)
     
-    work_small_job("practice", 0, 10 )
+    # work_small_job("practice", 0, 10 )
 
 
     # print align_one_read_by_hash(reads[2][0])
