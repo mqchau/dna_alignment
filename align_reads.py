@@ -8,7 +8,6 @@ import cluster_sub_read_match
 
 db = None
 reference_genome = None
-all_ref = {}
 
 # define how to score in local alignment process
 mismatch = -1
@@ -48,11 +47,11 @@ def save_mutation_to_db(mutation_pair):
     for mutation_list in mutation_pair:
         for one_base in mutation_list:
             if one_base["type"] == "insert":
-                db.execute("INSERT INTO aligned_bases (ref_idx, mutation_type, insert_idx, new_base) VALUES (%d, %d, %d, %d)" % (one_base["ref_idx"], 2, one_base["insert_idx"], one_base["base"]))
+                db.execute("INSERT INTO aligned_bases (ref_idx, mutation_type, insert_idx, new_base) VALUES (%d, %d, %d, '%s')" % (one_base["ref_idx"], 2, one_base["insert_idx"], one_base["base"]))
             elif one_base["type"] == "match":
-                db.execute("INSERT INTO aligned_bases (ref_idx, mutation_type, new_base) VALUES (%d, %d, %d)" % (one_base["ref_idx"], 4, one_base["base"]))
+                db.execute("INSERT INTO aligned_bases (ref_idx, mutation_type, new_base) VALUES (%d, %d, '%s')" % (one_base["ref_idx"], 4, one_base["base"]))
             elif one_base["type"] == "mismatch":
-                db.execute("INSERT INTO aligned_bases (ref_idx, mutation_type, new_base) VALUES (%d, %d, %d)" % (one_base["ref_idx"], 3, one_base["base"]))
+                db.execute("INSERT INTO aligned_bases (ref_idx, mutation_type, new_base) VALUES (%d, %d, '%s')" % (one_base["ref_idx"], 3, one_base["base"]))
             elif one_base["type"] == "delete":
                 db.execute("INSERT INTO aligned_bases (ref_idx, mutation_type) VALUES (%d, %d)" % (one_base["ref_idx"], 1))
 
@@ -141,14 +140,12 @@ def align_read_by_local_alignment(ref, read, ref_start_idx):
 def get_all_reads_to_work(start_idx, stop_idx):
     global db
 
-    query_result = db.execute("SELECT * FROM read WHERE idx >= %d AND idx < %d" % (start_idx, stop_idx))
+    query_result = db.execute("SELECT * FROM read_raw WHERE idx >= %d AND idx < %d" % (start_idx, stop_idx))
     if query_result is None:
         return []
 
-    return map(lambda x: [
-        commonlib.get_mer_from_int_str(x['left_read']), 
-        commonlib.get_mer_from_int_str(x['right_read'])
-    ], query_result.fetchall())
+    return map(lambda x: [ x['left_read'], x['right_read'] ], 
+               query_result.fetchall())
 
         
 def get_read_pair_by_idx(idx):
@@ -183,7 +180,6 @@ def select_good_location_pair(left_clusters, right_clusters):
     return good_pairs
 
 def align_read_new(reference_genome, reference_hash, read_pair):
-
     left_read = dna_read(read_pair[0], reference_hash)
     right_read = dna_read(read_pair[1], reference_hash)
 
@@ -192,7 +188,8 @@ def align_read_new(reference_genome, reference_hash, read_pair):
     right_possible_locations = right_read.find_possible_alignment()
 
     cluster_pairs = select_good_location_pair(left_possible_locations, right_possible_locations)
-    print cluster_pairs
+    if len(cluster_pairs) == 0:
+        return False
 
     for one_cluter_pair in cluster_pairs:
         left_start_idx = one_cluter_pair["left_cluster"].get_cluster_expected_start() - 10
@@ -207,8 +204,10 @@ def align_read_new(reference_genome, reference_hash, read_pair):
 
         # ipdb.set_trace()
 
-        debug_print_mutations(left_mutation)
-        debug_print_mutations(right_mutation)
+        # debug_print_mutations(left_mutation)
+        # debug_print_mutations(right_mutation)
+        save_mutation_to_db([left_mutation, right_mutation])
+    return True
 
 
 class dna_read:
@@ -280,62 +279,33 @@ class sub_read:
         return self.match_hash
 
 
-def work_small_job(datafile, start_idx, stop_idx):
-    global all_ref, db, reference_genome
+def work_small_job(reference_genome, reference_hash, start_idx, stop_idx):
+    global db
     db = database.create_database_connection()
-    if datafile not in all_ref:
-        all_ref[datafile] = commonlib.read_reference_genome('dataset/%s/ref.txt' % datafile)
-
-    reference_genome = all_ref[datafile]
 
     all_reads_to_work = get_all_reads_to_work(start_idx, stop_idx)
-
     for relative_read_idx, one_read in enumerate(all_reads_to_work):
-        mutation_list = align_one_read_pair(one_read)
-        if len(mutation_list) == 0:
-            print "can't align read %d" % (start_idx + relative_read_idx)
-        save_mutation_to_db(mutation_list)
+        aligned = align_read_new(reference_genome, reference_hash, one_read)
+        if not aligned:
+            db.execute("INSERT INTO unaligned_reads (read_idx) VALUES (%d)" % (start_idx + relative_read_idx))
 
 if __name__ == "__main__":
+    dataset = 'practice2'
+
     # delete all saved aligned reads
     global db, reference_genome
     db = database.create_database_connection()
-    # db.execute("DELETE FROM aligned_bases")
+    db.execute("DELETE FROM aligned_bases")
+    db.execute("DELETE FROM unaligned_reads")
 
     # read reference genome
     # reference_genome = commonlib.read_reference_genome_bare('dataset/practice2/ref.txt')
-    with open("reference_genome.pickle", "rb") as f:
+    with open("dataset/%s/reference_genome.pickle" % dataset, "rb") as f:
         reference_genome = pickle.load(f)
 
     # read the reference hash
-    with open("all_hash_location.pickle", "rb") as f:
+    with open("dataset/%s/all_hash_location.pickle" % dataset, "rb") as f:
         reference_hash = pickle.load(f)
 
-    # align one read pair
-    for read_idx in xrange(0,5):
-        read_pair = get_read_pair_by_idx(read_idx)
-        align_read_new(reference_genome, reference_hash, read_pair)
-        print "--------------------"
 
-
-    # match_score, mutations = align_read_by_local_alignment(reference_genome, reads[2][1], 0)
-    
-    # work_small_job("practice", 0, 10 )
-
-
-    # print align_one_read_by_hash(reads[2][0])
-    # print align_one_read_by_hash(reads[2][1])
-
-    # debug_print_mutations(mutations)
-
-    # # align each reads
-    # for read_idx, one_read in enumerate(reads[2:3]):
-    #     mutation_list = align_one_read_pair(one_read)
-    #     save_mutation_to_db(mutation_list)
-    #     # if len(mutation_list) > 0:
-    #     if len(mutation_list) == 0:
-    #         print "can't align read %d" % read_idx
-    #     if read_idx % 50 == 0:
-    #         print "-----------------------%05d---------------------------" % read_idx
-    #     #     debug_print_mutations(mutation_list[0])
-    #     #     debug_print_mutations(mutation_list[1])
+    work_small_job(reference_genome, reference_hash, 0, 50)

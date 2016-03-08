@@ -1,8 +1,9 @@
+import pickle
 import database
 import commonlib
 
 db = None
-reference_arr = None
+reference_genome = None
 
 def save_mutation_to_file():
     all_mutation = get_all_mutation()
@@ -11,8 +12,8 @@ def save_mutation_to_file():
         f.write('>SNP\n')
         for one_snp in all_mutation["SNP"]:
             f.write('%s,%s,%d\n' % (
-                commonlib.get_base_from_int(one_snp["old_base"]),
-                commonlib.get_base_from_int(one_snp["new_base"]),
+                one_snp["old_base"],
+                one_snp["new_base"],
                 one_snp["ref_idx"]))
 
 
@@ -36,7 +37,7 @@ def get_all_snp():
         all_snp.append({
             "ref_idx": one_result["ref_idx"],
             "new_base": one_result["new_base"],
-            "old_base": reference_arr[one_result["ref_idx"]]
+            "old_base": reference_genome[one_result["ref_idx"]]
         })
 
     # sort by ref idx ascending
@@ -51,9 +52,12 @@ def get_all_del():
     return []
 
 if __name__ == "__main__":
-    global db, reference_arr
+    dataset = 'practice2'
+
+    global db, reference_genome
     db = database.create_database_connection()
 
     # save the mutation list into answer file format
-    reference_arr = commonlib.read_reference_genome('dataset/practice1/ref.txt')
+    with open("dataset/%s/reference_genome.pickle" % dataset, "rb") as f:
+        reference_genome = pickle.load(f)
     save_mutation_to_file()

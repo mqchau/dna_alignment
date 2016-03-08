@@ -70,6 +70,8 @@ if __name__ == "__main__":
 
     else:
         # read reference genome and populate database
-        reference_arr = commonlib.read_reference_genome_bare('dataset/practice2/ref.txt')
-        create_reference_hash_memory(0,len(reference_arr),mer_length, reference_arr)
+        # reference_arr = commonlib.read_reference_genome_bare('dataset/practice2/ref.txt')
+        reference_arr = commonlib.read_reference_genome_bare('dataset/ugrad/ref.txt')
+        
+        # create_reference_hash_memory(0,len(reference_arr),mer_length, reference_arr)
 

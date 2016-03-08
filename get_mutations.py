@@ -7,11 +7,13 @@ import numpy as np
 db = None
 
 def get_most_common_new_base(snp_list):
-    base_count = np.zeros(4, dtype=np.uint32)
+    base_count = { "A": 0, "C": 0, "G": 0, "T": 0 }
     for one_snp in snp_list:
-        base_count[one_snp["new_base"]-1] += 1
-    max_base = np.argmax(base_count)
-    return max_base
+        base_count[one_snp["new_base"]] += 1
+    max_base_count = max(base_count.values())
+    for base in sorted(base_count.keys()):
+        if base_count[base] == max_base_count:
+            return base
 
 def get_ins_str(insert_list):
 
@@ -78,7 +80,7 @@ def get_mutations(ref_start_idx, ref_end_idx):
             
 def save_all_mutations(mutations):
     for one_mut in mutations["snp"]:
-        db.execute("INSERT INTO mutation (ref_idx, mutation_type, new_base) VALUES (%d, %d, %d)" % (one_mut["ref_idx"], 3, one_mut["new_base"]))
+        db.execute("INSERT INTO mutation (ref_idx, mutation_type, new_base) VALUES (%d, %d, '%s')" % (one_mut["ref_idx"], 3, one_mut["new_base"]))
 
     for one_mut in mutations["ins"]:
         db.execute("INSERT INTO mutation (ref_idx, mutation_type, ins_str) VALUES (%d, %d, '%s')" % (one_mut["ref_idx"], 2, one_mut["ins_str"]))
@@ -101,7 +103,7 @@ if __name__ == "__main__":
     db.execute("DELETE FROM mutation")
 
     # figure out the mutations at each base
-    all_mutations = get_mutations(0, 1500)
+    all_mutations = get_mutations(216000, 217000)
 
     pp = pprint.PrettyPrinter(indent=2)
     pp.pprint(all_mutations)
