@@ -50,8 +50,13 @@ def clusterize_matches(matches):
                     # print "not_in_range_anywhere %d" % one_match
                     cluster.append(set([one_match]))
 
+    return cluster
 
-    print cluster
+
+def remove_small_cluster(cluster):
+    return filter(lambda x: len(x) >= 3, cluster)
+
+    # print cluster
 
 
 if __name__ == "__main__":
@@ -59,7 +64,9 @@ if __name__ == "__main__":
         matches = pickle.load(f)
 
     forward_matches = matches["forward"]
-    print clusterize_matches(forward_matches)
+    forward_clusters = remove_small_cluster(clusterize_matches(forward_matches))
     backward_matches = matches["backward"]
-    print clusterize_matches(backward_matches)
+    backward_clusters = remove_small_cluster(clusterize_matches(backward_matches))
+
+    print forward_clusters, backward_clusters
 
