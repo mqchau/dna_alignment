@@ -4,6 +4,7 @@ import database
 import ipdb
 import numpy as np
 import pickle
+import cluster_sub_read_match
 
 db = None
 reference_genome = None
@@ -328,6 +329,29 @@ def get_read_pair_by_idx(idx):
 
     return [query_result.left_read, query_result.right_read]
 
+def select_good_location_pair(left_clusters, right_clusters):
+    good_pairs = []
+    for one_left in left_clusters["forward"]:
+        for one_right in right_clusters["backward"]:
+            pair_distance = one_right.get_cluster_expected_start() - one_left.get_cluster_expected_start()
+            if pair_distance > 100 and pair_distance < 200:
+                good_pairs.append({
+                    "type": "f",
+                    "left_cluster": one_left,
+                    "right_cluster": one_right
+                })
+    for one_left in left_clusters["backward"]:
+        for one_right in right_clusters["forward"]:
+            pair_distance = one_right.get_cluster_expected_start() - one_left.get_cluster_expected_start()
+            if pair_distance > 100 and pair_distance < 200:
+                good_pairs.append({
+                    "type": "b",
+                    "left_cluster": one_left,
+                    "right_cluster": one_right
+                })
+
+    return good_pairs
+
 def align_read_new(reference_genome, reference_hash, read_pair):
 
     left_read = dna_read(read_pair[0], reference_hash)
@@ -335,9 +359,11 @@ def align_read_new(reference_genome, reference_hash, read_pair):
 
     # try align left in order read first
     left_possible_locations = left_read.find_possible_alignment()
+    right_possible_locations = right_read.find_possible_alignment()
 
-    # right_possible_locations = right_read.find_possible_alignment()
+    cluster_pair = select_good_location_pair(left_possible_locations, right_possible_locations)
 
+    print cluster_pair
     # ipdb.set_trace()
 
 class dna_read:
@@ -360,22 +386,28 @@ class dna_read:
         for one_sub_read in sub_reads:
             one_sub_read.get_match_hash()
             matches["forward"].append(one_sub_read.match_hash)
-            print one_sub_read.match_hash
-            print "********************"
+            # print one_sub_read.match_hash
+            # print "********************"
             # ipdb.set_trace()
 
-        print "----------------------------------------"
+        # print "----------------------------------------"
 
         # try to align in reversed direction later
         sub_reads = self.get_sub_read(self.read[::-1])
         for one_sub_read in sub_reads:
             one_sub_read.get_match_hash()
             matches["backward"].append(one_sub_read.match_hash)
-            print one_sub_read.match_hash
-            print "********************"
+            # print one_sub_read.match_hash
+            # print "********************"
 
-        with open("read_matches.pickle", "wb") as f:
-            pickle.dump(matches, f, protocol=pickle.HIGHEST_PROTOCOL)
+        # with open("read_matches.pickle", "wb") as f:
+        #     pickle.dump(matches, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+
+        return {
+            "forward": cluster_sub_read_match.get_clusters_from_matches(matches["forward"]),
+            "backward": cluster_sub_read_match.get_clusters_from_matches(matches["backward"])
+        }
 
 
     def get_sub_read(self, read):
@@ -398,7 +430,7 @@ class sub_read:
         if self.sub_read in self.reference_hash:
             self.match_hash = self.reference_hash[self.sub_read]
         else:
-            print "sub read %s not in hash" % self.sub_read
+            # print "sub read %s not in hash" % self.sub_read
             self.match_hash = []
         return self.match_hash
 
@@ -434,10 +466,10 @@ if __name__ == "__main__":
         reference_hash = pickle.load(f)
 
     # align one read pair
-    read_idx = 2
-    read_pair = get_read_pair_by_idx(read_idx)
-
-    align_read_new(reference_genome, reference_hash, read_pair)
+    for read_idx in xrange(2,3):
+        read_pair = get_read_pair_by_idx(read_idx)
+        align_read_new(reference_genome, reference_hash, read_pair)
+        print "--------------------"
 
 
     # match_score, mutations = align_read_by_local_alignment(reference_genome, reads[2][1], 0)
