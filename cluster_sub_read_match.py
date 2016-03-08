@@ -1,4 +1,4 @@
-import pickle
+import pickle 
 import numpy as np
 import ipdb
 
@@ -18,7 +18,7 @@ class cluster:
 
     def get_cluster_expected_start(self):
         expected_start = map(lambda x: x.location - x.expected_loc_idx, list(self.location))
-        return np.round(np.mean(expected_start))
+        return int(np.round(np.mean(expected_start)))
 
     def add_location(self, new_loc):
         self.location.append(new_loc)
