@@ -8,8 +8,20 @@ reference_genome = None
 def save_mutation_to_file():
     all_mutation = get_all_mutation()
     with open('answer.txt', 'w') as f:
-        f.write('>practice_W_3_chr_1\n>STR\n>CNV\n>ALU\n>INS\n>DEL\n>INV\n')
-        f.write('>SNP\n')
+        f.write('>practice_E_1_chr_1\n>STR\n>CNV\n>ALU\n>INS\n')
+        
+        for one_snp in all_mutation["INS"]:
+            f.write('%s,%d\n' % (
+                one_snp["ins_str"],
+                one_snp["ref_idx"]))
+        
+        f.write('>DEL\n')
+        for one_snp in all_mutation["DEL"]:
+            f.write('%s,%d\n' % (
+                one_snp["del_str"],
+                one_snp["ref_idx"]))
+        
+        f.write('>INV\n>SNP\n')
         for one_snp in all_mutation["SNP"]:
             f.write('%s,%s,%d\n' % (
                 one_snp["old_base"],
@@ -28,7 +40,7 @@ def get_all_mutation():
     return all_mutation
 
 def get_all_snp():
-    query_result = db.execute("SELECT * FROM mutation WHERE mutation_type = 3")
+    query_result = db.execute("SELECT * FROM mutation WHERE mutation_type = 3 ORDER BY ref_idx")
     if query_result is None:
         raise Exception("Error in getting mutation list")
 
@@ -41,15 +53,45 @@ def get_all_snp():
         })
 
     # sort by ref idx ascending
-    all_snp = sorted(all_snp, key=lambda x: x["ref_idx"])
+    # all_snp = sorted(all_snp, key=lambda x: x["ref_idx"])
 
     return all_snp
 
 def get_all_ins():
-    return []
+    query_result = db.execute("SELECT * FROM mutation WHERE mutation_type = 2 ORDER BY ref_idx")
+    if query_result is None:
+        raise Exception("Error in getting mutation list")
+
+    all_ins = []
+    for one_result in query_result.fetchall():
+        all_ins.append({
+            "ref_idx": one_result["ref_idx"],
+            "ins_str": one_result["ins_str"]
+        })
+
+    return all_ins
 
 def get_all_del():
-    return []
+    query_result = db.execute("SELECT * FROM mutation WHERE mutation_type = 1 ORDER BY ref_idx")
+    if query_result is None:
+        raise Exception("Error in getting mutation list")
+
+    all_del = []
+    curr_del = []
+    for one_result in query_result.fetchall():
+        if len(curr_del) == 0 or one_result["ref_idx"] == curr_del[-1]["ref_idx"] + 1:
+            curr_del.append(one_result)
+        else:
+            del_str = ""
+            for one_del in curr_del:
+                del_str += reference_genome[one_del["ref_idx"]]
+            all_del.append({
+                "ref_idx": curr_del[0]["ref_idx"],
+                "del_str": del_str
+            })
+            curr_del = []
+
+    return all_del
 
 if __name__ == "__main__":
     dataset = 'practice2'
