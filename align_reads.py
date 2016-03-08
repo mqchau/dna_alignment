@@ -3,6 +3,7 @@ import commonlib
 import database
 import ipdb
 import numpy as np
+import pickle
 
 db = None
 reference_genome = None
@@ -329,43 +330,77 @@ def get_read_pair_by_idx(idx):
 
 def align_read_new(reference_genome, reference_hash, read_pair):
 
-    left_read = read_pair[0]
-    right_read = read_pair[1]
+    left_read = dna_read(read_pair[0], reference_hash)
+    right_read = dna_read(read_pair[1], reference_hash)
 
     # try align left in order read first
-    possible_locations = align_read_by_hash_new(left_read[::-1], reference_hash)
-    print "**************************************************"
-    possible_locations = align_read_by_hash_new(right_read, reference_hash)
+    left_possible_locations = left_read.find_possible_alignment()
 
-    ipdb.set_trace()
+    # right_possible_locations = right_read.find_possible_alignment()
+
+    # ipdb.set_trace()
+
+class dna_read:
+    def __init__(self, read, reference_hash):
+        self.read = read
+        self.reference_hash = reference_hash
+
+    def get_reversed(self):
+        return self.read[::-1]
+
+    def find_possible_alignment(self):
+
+        matches = {
+            "forward":[],
+            "backward":[]
+        }
+
+        # try to align in forward direction first
+        sub_reads = self.get_sub_read(self.read)
+        for one_sub_read in sub_reads:
+            one_sub_read.get_match_hash()
+            matches["forward"].append(one_sub_read.match_hash)
+            print one_sub_read.match_hash
+            print "********************"
+            # ipdb.set_trace()
+
+        print "----------------------------------------"
+
+        # try to align in reversed direction later
+        sub_reads = self.get_sub_read(self.read[::-1])
+        for one_sub_read in sub_reads:
+            one_sub_read.get_match_hash()
+            matches["backward"].append(one_sub_read.match_hash)
+            print one_sub_read.match_hash
+            print "********************"
+
+        with open("read_matches.pickle", "wb") as f:
+            pickle.dump(matches, f, protocol=pickle.HIGHEST_PROTOCOL)
 
 
-def align_read_by_hash_new(read, reference_hash):
+    def get_sub_read(self, read):
+        section_length = 10
+        sub_sections = []
+        move_length = 10
+        for i in xrange(0, len(read) - section_length+1, move_length):
+            # ipdb.set_trace()
+            sub_sections.append(sub_read(read[i:i+section_length], i, self.reference_hash))
 
-    # cut read into 10 - 10 - 10 - 10 - 10
-    section_length = 10
-    sub_sections = []
-    move_length = 10
-    for i in xrange(0, 50 - section_length+1, move_length):
-        # ipdb.set_trace()
-        sub_sections.append({
-            'str': read[i:i+section_length],
-            'offset': i
-        })
+        return sub_sections
 
-    possible_position = set()
-    for section_idx, sub_section in enumerate(sub_sections):
-        print sub_section['str']
-        print sub_section['offset']
-        if sub_section['str'] in reference_hash:
-            for location in reference_hash[sub_section['str']]:
-                possible_position.add(location)
-                print location
-        print "-------------------------------"
+class sub_read:
+    def __init__(self, sub_read, sub_read_idx, reference_hash):
+        self.sub_read = sub_read
+        self.sub_read_idx = sub_read_idx
+        self.reference_hash = reference_hash
 
-    return possible_position
-
-
+    def get_match_hash(self):
+        if self.sub_read in self.reference_hash:
+            self.match_hash = self.reference_hash[self.sub_read]
+        else:
+            print "sub read %s not in hash" % self.sub_read
+            self.match_hash = []
+        return self.match_hash
 
 
 def work_small_job(datafile, start_idx, stop_idx):
