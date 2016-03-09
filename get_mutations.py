@@ -41,7 +41,12 @@ def get_mutations(ref_start_idx, ref_end_idx):
         query = db.execute("SELECT * FROM aligned_bases WHERE ref_idx = %d" % ref_idx)
 
         mutations_at_ref = query.fetchall()
-        if len(mutations_at_ref) > 0:
+
+        if len(mutations_at_ref) < 6 and ref_idx > 50 and ref_idx < 1000000 - 50:
+            all_mutations["del"].append({
+                "ref_idx": ref_idx
+            })
+        elif len(mutations_at_ref) > 0:
             match_count, mismatch_count, del_count, ins_count = 0,0,0,0
             for one_mut in mutations_at_ref:
                 if one_mut["mutation_type"] == 4:

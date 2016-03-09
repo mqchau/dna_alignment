@@ -1,5 +1,5 @@
 import database
-dataset_name = "practice2"
+dataset_name = "ugrad"
 
 if __name__ == "__main__":
 

@@ -8,7 +8,7 @@ reference_genome = None
 def save_mutation_to_file():
     all_mutation = get_all_mutation()
     with open('answer.txt', 'w') as f:
-        f.write('>practice_E_1_chr_1\n>STR\n>CNV\n>ALU\n>INS\n')
+        f.write('>hw2undergrad_E_2_chr_1\n>STR\n>CNV\n>ALU\n>INS\n')
         
         for one_snp in all_mutation["INS"]:
             f.write('%s,%d\n' % (
