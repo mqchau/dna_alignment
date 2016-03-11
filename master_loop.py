@@ -54,7 +54,7 @@ def start_align_base():
     print "start aligning bases"
 
     # delete all saved reference genome hash
-    db = database.create_database_connection()
+    db = database.create_database_connection(database=datafile)
     db.execute("DELETE FROM aligned_bases")
     db.execute("DELETE FROM unaligned_reads")
 
@@ -77,7 +77,8 @@ def wait_align_base_loop():
             time.sleep(5)
         else:
             inloop = False
-    return 'get_mutation'
+    return 'wait_job_start'
+    # return 'get_mutation'
 
 def start_get_mutation():
 
@@ -86,7 +87,7 @@ def start_get_mutation():
     print "start getting mutations"
 
     # delete all saved reference genome hash
-    db = database.create_database_connection()
+    db = database.create_database_connection(database=datafile)
     db.execute("DELETE FROM mutation")
 
     reference_arr = commonlib.read_reference_genome('dataset/%s/ref.txt' % datafile)

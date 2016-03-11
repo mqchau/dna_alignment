@@ -43,17 +43,17 @@ def debug_print_mutations(mutation_list):
     print "Refer: %s\nDonor: %s" % (ref_string, read_string)
 
 
-def save_mutation_to_db(mutation_pair):
+def save_mutation_to_db(mutation_pair, read_idx):
     for mutation_list in mutation_pair:
         for one_base in mutation_list:
             if one_base["type"] == "insert":
-                db.execute("INSERT INTO aligned_bases (ref_idx, mutation_type, insert_idx, new_base) VALUES (%d, %d, %d, '%s')" % (one_base["ref_idx"], 2, one_base["insert_idx"], one_base["base"]))
+                db.execute("INSERT INTO aligned_bases (ref_idx, mutation_type, insert_idx, new_base, read_idx) VALUES (%d, %d, %d, '%s', %d)" % (one_base["ref_idx"], 2, one_base["insert_idx"], one_base["base"], read_idx))
             elif one_base["type"] == "match":
-                db.execute("INSERT INTO aligned_bases (ref_idx, mutation_type, new_base) VALUES (%d, %d, '%s')" % (one_base["ref_idx"], 4, one_base["base"]))
+                db.execute("INSERT INTO aligned_bases (ref_idx, mutation_type, new_base, read_idx) VALUES (%d, %d, '%s', %d)" % (one_base["ref_idx"], 4, one_base["base"], read_idx))
             elif one_base["type"] == "mismatch":
-                db.execute("INSERT INTO aligned_bases (ref_idx, mutation_type, new_base) VALUES (%d, %d, '%s')" % (one_base["ref_idx"], 3, one_base["base"]))
+                db.execute("INSERT INTO aligned_bases (ref_idx, mutation_type, new_base, read_idx) VALUES (%d, %d, '%s', %d)" % (one_base["ref_idx"], 3, one_base["base"], read_idx))
             elif one_base["type"] == "delete":
-                db.execute("INSERT INTO aligned_bases (ref_idx, mutation_type) VALUES (%d, %d)" % (one_base["ref_idx"], 1))
+                db.execute("INSERT INTO aligned_bases (ref_idx, mutation_type, read_idx) VALUES (%d, %d, %d)" % (one_base["ref_idx"], 1, read_idx))
 
 def align_read_by_local_alignment(ref, read, ref_start_idx):
     global indel, match, mismatch
@@ -179,7 +179,7 @@ def select_good_location_pair(left_clusters, right_clusters):
 
     return good_pairs
 
-def align_read_new(reference_genome, reference_hash, read_pair):
+def align_read_new(reference_genome, reference_hash, read_pair, read_idx):
     left_read = dna_read(read_pair[0], reference_hash)
     right_read = dna_read(read_pair[1], reference_hash)
 
@@ -206,7 +206,7 @@ def align_read_new(reference_genome, reference_hash, read_pair):
 
         # debug_print_mutations(left_mutation)
         # debug_print_mutations(right_mutation)
-        save_mutation_to_db([left_mutation, right_mutation])
+        save_mutation_to_db([left_mutation, right_mutation], read_idx)
     return True
 
 
@@ -279,13 +279,13 @@ class sub_read:
         return self.match_hash
 
 
-def work_small_job(reference_genome, reference_hash, start_idx, stop_idx):
+def work_small_job(dataset, reference_genome, reference_hash, start_idx, stop_idx):
     global db
-    db = database.create_database_connection()
+    db = database.create_database_connection(database=dataset)
 
     all_reads_to_work = get_all_reads_to_work(start_idx, stop_idx)
     for relative_read_idx, one_read in enumerate(all_reads_to_work):
-        aligned = align_read_new(reference_genome, reference_hash, one_read)
+        aligned = align_read_new(reference_genome, reference_hash, one_read, (start_idx + relative_read_idx))
         if not aligned:
             db.execute("INSERT INTO unaligned_reads (read_idx) VALUES (%d)" % (start_idx + relative_read_idx))
 
@@ -294,7 +294,7 @@ if __name__ == "__main__":
 
     # delete all saved aligned reads
     global db, reference_genome
-    db = database.create_database_connection()
+    db = database.create_database_connection(database=dataset)
     db.execute("DELETE FROM aligned_bases")
     db.execute("DELETE FROM unaligned_reads")
 

@@ -44,7 +44,7 @@ def wait_master_loop():
                 last_datafile = datafile
 
             print "align_base %d %d" % (start_idx, stop_idx)
-            align_reads.work_small_job(last_reference_genome, last_reference_hash, start_idx, stop_idx)
+            align_reads.work_small_job(datafile, last_reference_genome, last_reference_hash, start_idx, stop_idx)
             message.delete()
             continue
 

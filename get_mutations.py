@@ -95,7 +95,7 @@ def save_all_mutations(mutations):
 
 def work_small_job(datafile, start_idx, stop_idx):
     global db
-    db = database.create_database_connection()
+    db = database.create_database_connection(database=datafile)
 
     get_mutations(start_idx, stop_idx)
 

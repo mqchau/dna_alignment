@@ -33,10 +33,11 @@ CREATE TABLE IF NOT EXISTS aligned_bases (
     ref_idx         INTEGER,
     mutation_type   INTEGER,
     insert_idx      INTEGER,
-    new_base        CHAR
+    new_base        CHAR,
+    read_idx        INTEGER
 );
 
-CREATE INDEX aligned_bases_ref_idx ON aligned_bases;
+CREATE INDEX aligned_bases_ref_idx ON aligned_bases(ref_idx);
 
 
 -- This table is used to store the result after we do local alignment after hashing match
