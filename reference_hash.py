@@ -24,6 +24,9 @@ def create_reference_hash_save_redis(mer_length, reference, redis_path, redis_db
         # push to redis in a list with the key as mer length
         r.rpush(mer, i)
 
+        # push to reference genome copy in redis
+        r.rpush("reference-genome", reference[i])
+
 if __name__ == "__main__":
     redis_db=["10k", "1m", "100m"].index(dataset)
     reference_arr = commonlib.read_reference_genome_bare('dataset/%s/ref.txt' % dataset)
