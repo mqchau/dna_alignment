@@ -93,7 +93,7 @@ def start_get_mutation():
     reference_arr = commonlib.read_reference_genome('dataset/%s/ref.txt' % datafile)
     offset = 1000
     for i in xrange(0, len(reference_arr), offset):
-        sqs_client.send_message('get_mutation', '%s,%d,%d' % (datafile, i, i+offset))
+        sqs_client.send_message('get_mutation', '%s,%d,%d,300000' % (datafile, i, i+offset))
 
     return 'wait_get_mutation'
 

@@ -29,7 +29,7 @@ def get_ins_str(insert_list):
             break_cond = True
     return ins_str
 
-def get_mutations(ref_start_idx, ref_end_idx):
+def get_mutations(ref_start_idx, ref_end_idx, read_idx_limit):
     all_mutations = {
         "snp": [],
         "ins": [],
@@ -38,7 +38,7 @@ def get_mutations(ref_start_idx, ref_end_idx):
 
     for ref_idx in xrange(ref_start_idx, ref_end_idx):
         # from database get list of aligned bases related to this ref_idx
-        query = db.execute("SELECT * FROM aligned_bases WHERE ref_idx = %d" % ref_idx)
+        query = db.execute("SELECT * FROM aligned_bases WHERE ref_idx = %d AND read_idx < %d" % (ref_idx, read_idx_limit))
 
         mutations_at_ref = query.fetchall()
 
@@ -93,11 +93,11 @@ def save_all_mutations(mutations):
     for one_mut in mutations["del"]:
         db.execute("INSERT INTO mutation (ref_idx, mutation_type) VALUES (%d, %d)" % (one_mut["ref_idx"], 1))
 
-def work_small_job(datafile, start_idx, stop_idx):
+def work_small_job(datafile, start_idx, stop_idx, read_idx_limit):
     global db
     db = database.create_database_connection(database=datafile)
 
-    get_mutations(start_idx, stop_idx)
+    get_mutations(start_idx, stop_idx, read_idx_limit)
 
 
 if __name__ == "__main__":
@@ -108,7 +108,7 @@ if __name__ == "__main__":
     db.execute("DELETE FROM mutation")
 
     # figure out the mutations at each base
-    all_mutations = get_mutations(216000, 217000)
+    all_mutations = get_mutations(216000, 217000, 100000)
 
     pp = pprint.PrettyPrinter(indent=2)
     pp.pprint(all_mutations)

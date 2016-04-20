@@ -7,7 +7,7 @@ reference_genome = None
 
 def save_mutation_to_file():
     all_mutation = get_all_mutation()
-    with open('answer.txt', 'w') as f:
+    with open('answer_ugrad_3.txt', 'w') as f:
         f.write('>hw2undergrad_E_2_chr_1\n>STR\n>CNV\n>ALU\n>INS\n')
         
         for one_snp in all_mutation["INS"]:
@@ -94,10 +94,10 @@ def get_all_del():
     return all_del
 
 if __name__ == "__main__":
-    dataset = 'practice2'
+    dataset = 'ugrad'
 
     global db, reference_genome
-    db = database.create_database_connection()
+    db = database.create_database_connection(database=dataset)
 
     # save the mutation list into answer file format
     with open("dataset/%s/reference_genome.pickle" % dataset, "rb") as f:

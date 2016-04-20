@@ -29,7 +29,10 @@ def read_reference_genome_and_hash(datafile):
 
 def extract_datafile_idx(message_str):
     splitted = message_str.rstrip().split(',')
-    return splitted[0], int(splitted[1]), int(splitted[2])
+    if len(splitted) == 3:
+        return splitted[0], int(splitted[1]), int(splitted[2])
+    else:
+        return splitted[0], int(splitted[1]), int(splitted[2]), int(splitted[3])
 
 def wait_master_loop():
     global last_datafile, last_reference_genome, last_reference_hash
@@ -51,9 +54,9 @@ def wait_master_loop():
         # check for get mutation
         message = sqs_client.receive_message('get_mutation')
         if message is not None:
-            datafile, start_idx, stop_idx = extract_datafile_idx(message.body)
+            datafile, start_idx, stop_idx, read_idx_limit = extract_datafile_idx(message.body)
             print "get_mutation %d %d" % (start_idx, stop_idx)
-            get_mutations.work_small_job(datafile, start_idx, stop_idx)
+            get_mutations.work_small_job(datafile, start_idx, stop_idx, read_idx_limit)
             message.delete()
             continue
 
