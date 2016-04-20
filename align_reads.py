@@ -1,18 +1,26 @@
-import pickle
 import commonlib
-import database
 import ipdb
+import os
+import redis
 import numpy as np
-import pickle
 import cluster_sub_read_match
-
-db = None
-reference_genome = None
 
 # define how to score in local alignment process
 mismatch = -1
 match = 2
 indel = -1
+dataset = "10k"
+redis_db=["10k", "1m", "100m"].index(dataset)
+redis_path = os.environ["REDIS_HOST"] if "REDIS_HOST" in os.environ else "localhost"
+redis_client = redis.StrictRedis(host=redis_path, port=6379, db=redis_db)
+
+def get_reference_genome_one_base(base_idx):
+    base = redis_client.lrange("reference-genome", base_idx, base_idx)[0]
+    return b.decode("utf8")
+
+# left_idx is inclusive but right_idx is non-inclusive
+def get_reference_genome_many_base(left_idx, right_idx):
+    return "".join([x.decode("utf8") for x in redis_client.lrange("reference-genome", left_idx, right_idx-1)])
 
 def get_base_char_from_int(num):
 
@@ -33,27 +41,15 @@ def debug_print_mutations(mutation_list):
             read_string += one_base["base"]
             # print "%05d\t%d\t%d" % (one_base["ref_idx"], one_base["base"], one_base["base"])
         elif one_base["type"] == "mismatch":
-            ref_string += reference_genome[one_base["ref_idx"]]
+            ref_string += get_reference_genome_one_base(one_base["ref_idx"])
             read_string += one_base["base"].lower()
             # print "%05d\t%d\t%d\tmismatch" % (one_base["ref_idx"], reference_genome[one_base["ref_idx"]], one_base["base"])
         elif one_base["type"] == "delete":
-            ref_string += reference_genome[one_base["ref_idx"]]
+            ref_string += get_reference_genome_one_base(one_base["ref_idx"])
             read_string += "-"
             # print "%05d\t%d\t-" % (one_base["ref_idx"], reference_genome[one_base["ref_idx"]])
-    print "Refer: %s\nDonor: %s" % (ref_string, read_string)
+    print("Refer: %s\nDonor: %s" % (ref_string, read_string))
 
-
-def save_mutation_to_db(mutation_pair, read_idx):
-    for mutation_list in mutation_pair:
-        for one_base in mutation_list:
-            if one_base["type"] == "insert":
-                db.execute("INSERT INTO aligned_bases (ref_idx, mutation_type, insert_idx, new_base, read_idx) VALUES (%d, %d, %d, '%s', %d)" % (one_base["ref_idx"], 2, one_base["insert_idx"], one_base["base"], read_idx))
-            elif one_base["type"] == "match":
-                db.execute("INSERT INTO aligned_bases (ref_idx, mutation_type, new_base, read_idx) VALUES (%d, %d, '%s', %d)" % (one_base["ref_idx"], 4, one_base["base"], read_idx))
-            elif one_base["type"] == "mismatch":
-                db.execute("INSERT INTO aligned_bases (ref_idx, mutation_type, new_base, read_idx) VALUES (%d, %d, '%s', %d)" % (one_base["ref_idx"], 3, one_base["base"], read_idx))
-            elif one_base["type"] == "delete":
-                db.execute("INSERT INTO aligned_bases (ref_idx, mutation_type, read_idx) VALUES (%d, %d, %d)" % (one_base["ref_idx"], 1, read_idx))
 
 def align_read_by_local_alignment(ref, read, ref_start_idx):
     global indel, match, mismatch
@@ -67,8 +63,8 @@ def align_read_by_local_alignment(ref, read, ref_start_idx):
     # start calculating from the first bases of ref and read
     max_global_score = -9999
     max_global_location = tuple()
-    for read_base_idx in xrange(1, len(read)+1):
-        for ref_base_idx in xrange(1, len(ref)+1):
+    for read_base_idx in range(1, len(read)+1):
+        for ref_base_idx in range(1, len(ref)+1):
             score_from_top = score_table[read_base_idx-1, ref_base_idx, 0] + indel 
             score_from_left = score_table[read_base_idx, ref_base_idx-1, 0] + indel 
             diag_delta = match if read[read_base_idx-1] == ref[ref_base_idx-1] else mismatch
@@ -179,9 +175,12 @@ def select_good_location_pair(left_clusters, right_clusters):
 
     return good_pairs
 
-def align_read_new(reference_genome, reference_hash, read_pair, read_idx):
-    left_read = dna_read(read_pair[0], reference_hash)
-    right_read = dna_read(read_pair[1], reference_hash)
+def align_read_new(read_pair_raw):
+
+    read_pair = read_pair_raw.rstrip().split(",")
+
+    left_read = dna_read(read_pair[0])
+    right_read = dna_read(read_pair[1])
 
     # try align left in order read first
     left_possible_locations = left_read.find_possible_alignment()
@@ -189,31 +188,25 @@ def align_read_new(reference_genome, reference_hash, read_pair, read_idx):
 
     cluster_pairs = select_good_location_pair(left_possible_locations, right_possible_locations)
     if len(cluster_pairs) == 0:
-        return False
+        return []
 
     for one_cluter_pair in cluster_pairs:
         left_start_idx = one_cluter_pair["left_cluster"].get_cluster_expected_start() - 10
         right_start_idx = one_cluter_pair["right_cluster"].get_cluster_expected_start() - 10
         # ipdb.set_trace()
         if one_cluter_pair["type"] == "f":
-            max_score, left_mutation = align_read_by_local_alignment(reference_genome[left_start_idx:left_start_idx+70], left_read.read, left_start_idx)
-            max_score, right_mutation = align_read_by_local_alignment(reference_genome[right_start_idx:right_start_idx+70], right_read.get_reversed(), right_start_idx)
+            max_score, left_mutation = align_read_by_local_alignment(get_reference_genome_many_base(left_start_idx,left_start_idx+70), left_read.read, left_start_idx)
+            max_score, right_mutation = align_read_by_local_alignment(get_reference_genome_many_base(right_start_idx,right_start_idx+70), right_read.get_reversed(), right_start_idx)
         else:
-            max_score, left_mutation = align_read_by_local_alignment(reference_genome[left_start_idx:left_start_idx+70], left_read.get_reversed(), left_start_idx)
-            max_score, right_mutation = align_read_by_local_alignment(reference_genome[right_start_idx:right_start_idx+70], right_read.read, right_start_idx)
+            max_score, left_mutation = align_read_by_local_alignment(get_reference_genome_many_base(left_start_idx,left_start_idx+70), left_read.get_reversed(), left_start_idx)
+            max_score, right_mutation = align_read_by_local_alignment(get_reference_genome_many_base(right_start_idx,right_start_idx+70), right_read.read, right_start_idx)
 
-        # ipdb.set_trace()
-
-        # debug_print_mutations(left_mutation)
-        # debug_print_mutations(right_mutation)
-        save_mutation_to_db([left_mutation, right_mutation], read_idx)
-    return True
+    return [left_mutation, right_mutation]
 
 
 class dna_read:
-    def __init__(self, read, reference_hash):
+    def __init__(self, read):
         self.read = read
-        self.reference_hash = reference_hash
 
     def get_reversed(self):
         return self.read[::-1]
@@ -244,11 +237,8 @@ class dna_read:
             # print one_sub_read.match_hash
             # print "********************"
 
-        # with open("read_matches.pickle", "wb") as f:
-        #     pickle.dump(matches, f, protocol=pickle.HIGHEST_PROTOCOL)
-
-
         return {
+
             "forward": cluster_sub_read_match.get_clusters_from_matches(matches["forward"]),
             "backward": cluster_sub_read_match.get_clusters_from_matches(matches["backward"])
         }
@@ -258,54 +248,20 @@ class dna_read:
         section_length = 10
         sub_sections = []
         move_length = 10
-        for i in xrange(0, len(read) - section_length+1, move_length):
+        for i in range(0, len(read) - section_length+1, move_length):
             # ipdb.set_trace()
-            sub_sections.append(sub_read(read[i:i+section_length], i, self.reference_hash))
+            sub_sections.append(sub_read(read[i:i+section_length], i))
 
         return sub_sections
 
 class sub_read:
-    def __init__(self, sub_read, sub_read_idx, reference_hash):
+    def __init__(self, sub_read, sub_read_idx):
         self.sub_read = sub_read
         self.sub_read_idx = sub_read_idx
-        self.reference_hash = reference_hash
 
     def get_match_hash(self):
-        if self.sub_read in self.reference_hash:
-            self.match_hash = self.reference_hash[self.sub_read]
-        else:
-            # print "sub read %s not in hash" % self.sub_read
-            self.match_hash = []
+        self.match_hash = redis_client.lrange(self.sub_read, 0, -1)
         return self.match_hash
 
-
-def work_small_job(dataset, reference_genome, reference_hash, start_idx, stop_idx):
-    global db
-    db = database.create_database_connection(database=dataset)
-
-    all_reads_to_work = get_all_reads_to_work(start_idx, stop_idx)
-    for relative_read_idx, one_read in enumerate(all_reads_to_work):
-        aligned = align_read_new(reference_genome, reference_hash, one_read, (start_idx + relative_read_idx))
-        if not aligned:
-            db.execute("INSERT INTO unaligned_reads (read_idx) VALUES (%d)" % (start_idx + relative_read_idx))
-
 if __name__ == "__main__":
-    dataset = 'practice2'
-
-    # delete all saved aligned reads
-    global db, reference_genome
-    db = database.create_database_connection(database=dataset)
-    db.execute("DELETE FROM aligned_bases")
-    db.execute("DELETE FROM unaligned_reads")
-
-    # read reference genome
-    # reference_genome = commonlib.read_reference_genome_bare('dataset/practice2/ref.txt')
-    with open("dataset/%s/reference_genome.pickle" % dataset, "rb") as f:
-        reference_genome = pickle.load(f)
-
-    # read the reference hash
-    with open("dataset/%s/all_hash_location.pickle" % dataset, "rb") as f:
-        reference_hash = pickle.load(f)
-
-
-    work_small_job(reference_genome, reference_hash, 0, 50)
+    aligned = align_read_new("TTCCTCCGCTTCTTGTGGCTTCCCAGCACGCAACAAGGAAACACCAGCAC,AACATAGTAGGAAACACCGTATTGCCGAGTTGAATCTCTGATCTTGCAAT")

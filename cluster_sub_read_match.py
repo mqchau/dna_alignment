@@ -11,13 +11,14 @@ class cluster:
         return len(self.location)
 
     def is_in_range(self, new_loc):
+        # print(new_loc)
         if new_loc.location - new_loc.expected_loc_idx > self.get_cluster_expected_start() - 10 and new_loc.location - new_loc.expected_loc_idx < self.get_cluster_expected_start() + 10:
             return True
 
         return False
 
     def get_cluster_expected_start(self):
-        expected_start = map(lambda x: x.location - x.expected_loc_idx, list(self.location))
+        expected_start = list(map(lambda x: x.location - x.expected_loc_idx, list(self.location)))
         return int(np.round(np.mean(expected_start)))
 
     def add_location(self, new_loc):
@@ -28,8 +29,8 @@ class cluster:
         
 class location:
     def __init__(self, location, expected_loc_idx):
-        self.location = location
-        self.expected_loc_idx = expected_loc_idx
+        self.location = int(location)
+        self.expected_loc_idx = int(expected_loc_idx)
 
     def __repr__(self):
         return str(self.location)
@@ -89,5 +90,5 @@ if __name__ == "__main__":
         "backward": get_clusters_from_matches(matches["backward"])
     }
 
-    print match_cluster
+    print(match_cluster)
 
