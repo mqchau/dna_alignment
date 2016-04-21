@@ -27,9 +27,11 @@ def convert_mutation_list(mutation):
 
 def get_mutation_string_csv(mutation):
     if mutation["type"] == "delete":
-        return "delete"
+        return "delete,,"
+    elif mutation["type"] == "insert":
+        return "insert,%s,%d" % (mutation["base"], mutation["insert_idx"])
     else:
-        return "%s,%s" % (mutation["type"], mutation["base"])
+        return "%s,%s," % (mutation["type"], mutation["base"])
 
 def pile_up(ref_idx, mutation_list):
     pp.pprint(ref_idx, mutation_list)

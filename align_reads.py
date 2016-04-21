@@ -133,24 +133,6 @@ def align_read_by_local_alignment(ref, read, ref_start_idx):
 
     return max_global_score, mutations
 
-def get_all_reads_to_work(start_idx, stop_idx):
-    global db
-
-    query_result = db.execute("SELECT * FROM read_raw WHERE idx >= %d AND idx < %d" % (start_idx, stop_idx))
-    if query_result is None:
-        return []
-
-    return map(lambda x: [ x['left_read'], x['right_read'] ], 
-               query_result.fetchall())
-
-        
-def get_read_pair_by_idx(idx):
-    query_result = db.execute("SELECT * FROM read_raw WHERE idx = %d" % read_idx).fetchone()
-    
-    if query_result is None:
-        return None
-
-    return [query_result.left_read, query_result.right_read]
 
 def select_good_location_pair(left_clusters, right_clusters):
     good_pairs = []
