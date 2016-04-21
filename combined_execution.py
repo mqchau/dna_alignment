@@ -6,8 +6,10 @@ from __future__ import print_function
 import sys
 from operator import add
 import re
+import ipdb
 from pyspark import SparkContext, SparkConf
 from align_reads import align_read_new
+from pile_up import pile_up
 
 import pprint
 pp = pprint.PrettyPrinter(indent=4)
@@ -33,9 +35,12 @@ def get_mutation_string_csv(mutation):
     else:
         return "%s,%s," % (mutation["type"], mutation["base"])
 
-def pile_up(ref_idx, mutation_list):
-    pp.pprint(ref_idx, mutation_list)
-    return "A"
+def pile_up_step(ref_idx_and_mutation_list):
+    # ipdb.set_trace()
+    ref_idx = ref_idx_and_mutation_list[0]
+    mutations = list(ref_idx_and_mutation_list[1])
+    # pp.pprint((ref_idx, mutations))
+    return pile_up(ref_idx, mutations)
 
 if __name__ == "__main__":
     dataset_name = "10k" # 10k, 1m or 100m
@@ -44,11 +49,14 @@ if __name__ == "__main__":
     conf = SparkConf().setAppName("dna_alignment").setMaster("local[4]")
     sc = SparkContext(conf=conf)
     lines = sc.textFile("dataset/%s/reads.txt" % dataset_name, 16)
-    aligned_reads = lines.flatMap(align_single_read).groupByKey().reduce(pile_up)
-    mutations = aligned_reads.collect()
-    for (word, count) in output:
-        print("%s: %i" % (word, count))
+    
+    # aligned_reads = lines.flatMap(align_single_read).groupByKey().reduce(pile_up_step)
+    # mutations = aligned_reads.collect()
+    # for (ref_idx, mutation) in mutations:
+    #     print("%d: %s" % (ref_idx, mutation))
+    aligned_reads = lines.flatMap(align_single_read).groupByKey().map(pile_up_step)
 
+    aligned_reads.saveAsTextFile("spark_result")
     sc.stop()
 
     

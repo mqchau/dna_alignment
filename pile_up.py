@@ -23,7 +23,6 @@ def get_ins_str(insert_list):
     ins_str = ""
     while not break_cond:
         insert_at_this_idx = list(filter(lambda x: int(x.split(",")[2]) == ins_idx, insert_list))
-        ipdb.set_trace()
         if len(insert_at_this_idx) > 0:
             ins_str += str(get_most_common_new_base(insert_at_this_idx))
             ins_idx +=1
@@ -53,14 +52,14 @@ def pile_up(ref_idx, mutations_at_ref):
 
         if match_count == max_count:
             # we think this is match, no need to report
-            pass
+            return ("match", "%d," % ref_idx)
         elif mismatch_count == max_count:
             # we think this is a mismatch
-            return ("snp", get_most_common_new_base(list(filter(lambda x: x.split(",")[0] == "mismatch", mutations_at_ref))))
+            return ("snp", "%d,%s" % (ref_idx, get_most_common_new_base(list(filter(lambda x: x.split(",")[0] == "mismatch", mutations_at_ref)))))
         elif del_count == max_count:
-            return ("del",)
+            return ("del", "%d," % ref_idx)
         elif ins_count == max_count:
-            return ("ins", get_ins_str(list(filter(lambda x: x.split(",")[0] == "insert", mutations_at_ref))))
+            return ("ins", "%d,%s" % (ref_idx, get_ins_str(list(filter(lambda x: x.split(",")[0] == "insert", mutations_at_ref)))))
 
 if __name__ == "__main__":
     mutation = pile_up(1000, [
