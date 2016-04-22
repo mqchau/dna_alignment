@@ -33,7 +33,7 @@ def get_ins_str(insert_list):
 def pile_up(ref_idx, mutations_at_ref):
 
     if len(mutations_at_ref) < 6:
-        return ("del",)
+        return ("del","%d," % ref_idx)
     elif len(mutations_at_ref) > 0:
         match_count, mismatch_count, del_count, ins_count = 0,0,0,0
         for one_mut in mutations_at_ref:

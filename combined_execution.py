@@ -42,6 +42,13 @@ def pile_up_step(ref_idx_and_mutation_list):
     # pp.pprint((ref_idx, mutations))
     return pile_up(ref_idx, mutations)
 
+def sort_mutation_by_idx(mutation_type_and_list):
+    mutation_type = mutation_type_and_list[0]
+    mutation_list = list(mutation_type_and_list[1])
+    pp.pprint(mutation_list)
+    mutation_list = sorted(mutation_list, key=(lambda x: int(x.split(",")[0])))
+    return (mutation_type, mutation_list)
+
 if __name__ == "__main__":
     dataset_name = "10k" # 10k, 1m or 100m
 
@@ -54,10 +61,9 @@ if __name__ == "__main__":
     # mutations = aligned_reads.collect()
     # for (ref_idx, mutation) in mutations:
     #     print("%d: %s" % (ref_idx, mutation))
-    aligned_reads = lines.flatMap(align_single_read).groupByKey().map(pile_up_step)
-
-    aligned_reads.saveAsTextFile("spark_result")
+    aligned_reads = lines.flatMap(align_single_read).groupByKey()
+    piled_up_mutations = aligned_reads.map(pile_up_step).groupByKey()
+    formatted_mutation = piled_up_mutations.map(sort_mutation_by_idx)
+    formatted_mutation.saveAsTextFile("spark_result")
+    # pp.pprint(piled_up_mutations.collect())
     sc.stop()
-
-    
-    #  
